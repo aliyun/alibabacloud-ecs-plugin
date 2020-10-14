@@ -6,13 +6,13 @@ import com.alibabacloud.jenkins.ecs.client.AlibabaEcsClient;
 import com.alibabacloud.jenkins.ecs.exception.AlibabaEcsException;
 import com.alibabacloud.jenkins.ecs.util.CloudHelper;
 import com.aliyuncs.ecs.model.v20140526.RunInstancesRequest;
+import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
 import jenkins.model.Jenkins;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang.StringUtils;
 
 /**

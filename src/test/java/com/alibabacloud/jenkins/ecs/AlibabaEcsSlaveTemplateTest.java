@@ -8,7 +8,6 @@ import com.alibaba.fastjson.JSON;
 
 import com.alibabacloud.credentials.plugin.auth.AlibabaPrivateKey;
 import com.alibabacloud.jenkins.ecs.client.AlibabaEcsClient;
-import org.apache.commons.compress.utils.Lists;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

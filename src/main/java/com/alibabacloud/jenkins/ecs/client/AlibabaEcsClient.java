@@ -55,9 +55,9 @@ import com.aliyuncs.ecs.model.v20140526.StopInstanceResponse;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang.StringUtils;
 
 /**
