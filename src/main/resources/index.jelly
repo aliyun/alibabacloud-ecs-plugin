@@ -1,0 +1,7 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin integrates Jenkins with
+    <a href="https://www.aliyun.com/product/ecs">Alibaba Cloud ECS</a>
+    or anything implementing
+    the ECS API's such as an CentOS.
+</div>

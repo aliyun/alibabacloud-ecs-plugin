@@ -1,0 +1,11 @@
+*.DS_Store
+*.classpath
+*.settings
+*.project
+*.iml
+*.idea
+target
+logs
+aliyun-ecs/test-output*
+aliyun-ecs/bin
+work

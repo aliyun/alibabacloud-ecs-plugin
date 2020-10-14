@@ -1,0 +1,54 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout"
+         xmlns:f="/lib/form">
+    <l:layout permission="${it.CONFIGURE}" title="${%title(it.displayName)}">
+        <st:include page="sidepanel.jelly"/>
+        <l:main-panel>
+            <f:form method="post" action="configSubmit" name="config">
+                <j:set var="instance" value="${it.node}"/>
+                <j:set var="descriptor" value="${instance.descriptor}"/>
+
+                <f:entry title="Instance Id" field="ecsInstanceId">
+                    <f:readOnlyTextbox value="${it.instanceId}"/>
+                </f:entry>
+                <f:entry title="${%Template Id}" field="templateId">
+                    <f:readOnlyTextbox value="${it.templateId}"/>
+                </f:entry>
+                <f:entry title="${%Name}" field="name">
+                    <f:textbox value="${it.name}"/><!-- anomaly. instance[field] isn't what we want. -->
+                </f:entry>
+                <f:entry title="Cloud Name" field="cloudName">
+                    <f:readOnlyTextbox value="${instance.cloudName}"/>
+                </f:entry>
+                <f:entry title="Public IP" field="publicIp">
+                    <f:readOnlyTextbox value="${instance.publicIp}"/>
+                </f:entry>
+                <f:entry title="# of executors" field="numExecutors">
+                    <f:textbox/>
+                </f:entry>
+                <f:entry title="remoteFS" field="remoteFS">
+                    <f:textbox value="${instance.remoteFS}"/>
+                </f:entry>
+                <f:entry title="${%Init Script}" field="initScript">
+                    <f:textarea/>
+                </f:entry>
+                <f:entry title="Labels" field="labelString">
+                    <f:textbox/>
+                </f:entry>
+
+                <!-- main body of the configuration -->
+                <!-- <st:include it="${instance}" page="configure-entries.jelly" /> -->
+
+                <f:descriptorList title="${%Node Properties}"
+                                  descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}"
+                                  field="nodeProperties"/>
+
+                <f:bottomButtonBar>
+                    <f:submit value="${%Save}"/>
+                </f:bottomButtonBar>
+            </f:form>
+            <st:adjunct includes="lib.form.confirm"/>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>
+
