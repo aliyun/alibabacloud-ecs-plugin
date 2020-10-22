@@ -1,6 +1,6 @@
 # Alibabacloud ECS plugin
 
-# Introductionf
+# Introduction
 This plugin extends Jenkins slave node generation (node provision), in the case of high concurrent 
 project integration,use this plugin to form jenins master-slave mode for project integration
 
