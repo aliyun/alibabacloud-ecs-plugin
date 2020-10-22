@@ -9,13 +9,13 @@
         <relativePath/>
     </parent>
     <groupId>com.alibabacloud.jenkins</groupId>
-    <artifactId>alibabacloud-ecs</artifactId>
+    <artifactId>alibabacloud-ecs-jenkins</artifactId>
     <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <properties>
         <revision>1.0</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.235.1</jenkins.version>
+        <jenkins.version>2.190.1</jenkins.version>
         <java.level>8</java.level>
         <google.guava.version>19.0</google.guava.version>
         <aliyun-java-sdk.version>4.5.6</aliyun-java-sdk.version>
@@ -167,7 +167,7 @@
         </dependency>
         <dependency>
             <groupId>com.alibabacloud.jenkins</groupId>
-            <artifactId>alibabacloud-credentials</artifactId>
+            <artifactId>alibabacloud-credentials-jenkins</artifactId>
             <version>1.0</version>
         </dependency>
     </dependencies>
