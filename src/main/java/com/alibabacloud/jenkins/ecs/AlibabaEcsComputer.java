@@ -13,36 +13,36 @@ import org.kohsuke.stapler.HttpResponse;
 @Slf4j
 public class AlibabaEcsComputer extends SlaveComputer {
 
-    public AlibabaEcsComputer(Slave slave) {
-        super(slave);
+    public AlibabaEcsComputer(Slave follower) {
+        super(follower);
     }
 
     public String getEcsType() {
-        AlibabaEcsSpotSlave node = getNode();
+        AlibabaEcsSpotFollower node = getNode();
         return node == null ? null : node.getInstanceType();
     }
 
     @CheckForNull
     public String getInstanceId() {
-        AlibabaEcsSpotSlave node = getNode();
+        AlibabaEcsSpotFollower node = getNode();
         return node == null ? null : node.getEcsInstanceId();
     }
 
     public AlibabaCloud getCloud() {
-        AlibabaEcsSpotSlave node = getNode();
+        AlibabaEcsSpotFollower node = getNode();
         return node == null ? null : node.getCloud();
     }
 
     @Override
-    public AlibabaEcsSpotSlave getNode() {
-        return (AlibabaEcsSpotSlave)super.getNode();
+    public AlibabaEcsSpotFollower getNode() {
+        return (AlibabaEcsSpotFollower)super.getNode();
     }
 
     @Override
     public HttpResponse doDoDelete() {
         checkPermission(DELETE);
         log.info("doDoDelete node");
-        AlibabaEcsSpotSlave node = getNode();
+        AlibabaEcsSpotFollower node = getNode();
         if (node != null) {
             log.info("doDelete node: {}", node.getNodeName());
             node.terminate();
@@ -51,7 +51,7 @@ public class AlibabaEcsComputer extends SlaveComputer {
     }
 
     public void onConnected() {
-        AlibabaEcsSpotSlave node = getNode();
+        AlibabaEcsSpotFollower node = getNode();
         if (node != null) {
             Boolean result =  node.onConnected();
             log.info("node.onConnected() result is:",result);

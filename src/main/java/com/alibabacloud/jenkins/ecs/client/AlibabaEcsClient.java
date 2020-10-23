@@ -1,5 +1,6 @@
 package com.alibabacloud.jenkins.ecs.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -52,6 +53,7 @@ import com.aliyuncs.ecs.model.v20140526.RunInstancesRequest;
 import com.aliyuncs.ecs.model.v20140526.RunInstancesResponse;
 import com.aliyuncs.ecs.model.v20140526.StopInstanceRequest;
 import com.aliyuncs.ecs.model.v20140526.StopInstanceResponse;
+import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
@@ -68,6 +70,8 @@ public class AlibabaEcsClient {
 
     private IAcsClient client;
     private String regionNo;
+    private static Integer MAX_PAGE_SIZE = 50;
+    private static Integer INIT_PAGE_NUMBER = 1;
 
     public AlibabaEcsClient(AlibabaCloudCredentials credentials, String regionNo) {
         IClientProfile profile = DefaultProfile.getProfile(regionNo,
@@ -108,18 +112,18 @@ public class AlibabaEcsClient {
     }
 
     public List<Vpc> describeVpcs() {
+
+        DescribeVpcsRequest request = new DescribeVpcsRequest();
+        request.setPageNumber(INIT_PAGE_NUMBER);
+        request.setPageSize(MAX_PAGE_SIZE);
+        request.setSysRegionId(regionNo);
+        List<Vpc> vpcList = new ArrayList<>();
         try {
-            DescribeVpcsRequest request = new DescribeVpcsRequest();
-            request.setSysRegionId(regionNo);
-            DescribeVpcsResponse acsResponse = client.getAcsResponse(request);
-            if (CollectionUtils.isEmpty(acsResponse.getVpcs())) {
-                return Lists.newArrayList();
-            }
-            return acsResponse.getVpcs();
+            describeVpcs(vpcList, request);
         } catch (Exception e) {
             log.error("describeVpcs error.", e);
         }
-        return Lists.newArrayList();
+        return vpcList;
     }
 
     public String createVpc(String cidrBlock) {
@@ -406,4 +410,20 @@ public class AlibabaEcsClient {
         return null;
     }
 
+    private void describeVpcs(List<Vpc> vpcList, DescribeVpcsRequest request) throws ClientException {
+
+
+        DescribeVpcsResponse acsResponse = client.getAcsResponse(request);
+        if (CollectionUtils.isEmpty(acsResponse.getVpcs())) {
+            return;
+        }
+        vpcList.addAll(acsResponse.getVpcs());
+        if (acsResponse.getVpcs().size() < MAX_PAGE_SIZE) {
+            return;
+        }
+        request.setPageNumber(request.getPageNumber() + 1);
+        describeVpcs(vpcList, request);
+
+
+    }
 }

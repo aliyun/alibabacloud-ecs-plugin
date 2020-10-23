@@ -24,28 +24,28 @@ import static org.mockito.Mockito.when;
     {"javax.crypto.*", "org.hamcrest.*", "javax.net.ssl.*", "com.sun.org.apache.xerces.*", "javax.xml.*", "org.xml.*"})
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
-    {AlibabaEcsSpotSlave.class, AlibabaEcsComputerLauncher.class, SlaveComputer.class})
+    {AlibabaEcsSpotFollower.class, AlibabaEcsComputerLauncher.class, SlaveComputer.class})
 public class AlibabaEcsComputerTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
     @Mock
-    private AlibabaEcsSpotSlave slave;
+    private AlibabaEcsSpotFollower follower;
 
     @Before
     public void setUp() throws IOException {
-        when(slave.getNodeName()).thenReturn("i-xxx");
-        when(slave.getEcsInstanceId()).thenReturn("i-xxx");
-        when(slave.getInstanceType()).thenReturn("ecs.c5.large");
+        when(follower.getNodeName()).thenReturn("i-xxx");
+        when(follower.getEcsInstanceId()).thenReturn("i-xxx");
+        when(follower.getInstanceType()).thenReturn("ecs.c5.large");
         DescribeInstancesResponse.Instance instance = new DescribeInstancesResponse.Instance();
-        when(slave.describeNode()).thenReturn(instance);
-        when(slave.getNumExecutors()).thenReturn(1);
-        r.jenkins.addNode(slave);
+        when(follower.describeNode()).thenReturn(instance);
+        when(follower.getNumExecutors()).thenReturn(1);
+        r.jenkins.addNode(follower);
     }
 
     @Test
     public void getBaseInfoTest() {
-        AlibabaEcsComputer computer = new AlibabaEcsComputer(slave);
+        AlibabaEcsComputer computer = new AlibabaEcsComputer(follower);
         assertEquals("ecs.c5.large", computer.getEcsType());
         assertEquals("i-xxx", computer.getInstanceId());
     }

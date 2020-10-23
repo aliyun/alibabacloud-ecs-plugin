@@ -68,7 +68,7 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 @Slf4j
 public class AlibabaCloud extends Cloud {
 
-    private transient ReentrantLock slaveCountingLock = new ReentrantLock();
+    private transient ReentrantLock followerCountingLock = new ReentrantLock();
     public static final String CLOUD_ID_PREFIX = "ecs-";
     public static final String DEFAULT_REMOTE_FS = "/root";
     public static final String DEFAULT_ECS_REGION = "cn-beijing";
@@ -93,7 +93,7 @@ public class AlibabaCloud extends Cloud {
     private String labelString;
     private int minimumNumberOfInstances;
 
-    private List<AlibabaEcsSlaveTemplate> templates;
+    private List<AlibabaEcsFollowerTemplate> templates;
 
     private transient AlibabaEcsClient connection;
 
@@ -140,7 +140,7 @@ public class AlibabaCloud extends Cloud {
         this.initScript = initScript;
         this.labelString = labelString;
 
-        AlibabaEcsSlaveTemplate template = new AlibabaEcsSlaveTemplate(region, zone, instanceType,
+        AlibabaEcsFollowerTemplate template = new AlibabaEcsFollowerTemplate(region, zone, instanceType,
             minimumNumberOfInstances, vsw,
             initScript, labelString, remoteFs);
         templates = Lists.newArrayList(template);
@@ -266,8 +266,8 @@ public class AlibabaCloud extends Cloud {
 
     // 注意, readResolve必须返回this
     protected Object readResolve() {
-        this.slaveCountingLock = new ReentrantLock();
-        for (AlibabaEcsSlaveTemplate template : templates) {
+        this.followerCountingLock = new ReentrantLock();
+        for (AlibabaEcsFollowerTemplate template : templates) {
             template.setParent(this);
         }
         resolvePrivateKey();
@@ -363,7 +363,7 @@ public class AlibabaCloud extends Cloud {
     @RequirePOST
     public HttpResponse doProvision(@QueryParameter String template) throws Exception {
         log.info("doProvision invoked template: {}", template);
-        AlibabaEcsSlaveTemplate alibabaEcsSlaveTemplate = getTemplate();
+        AlibabaEcsFollowerTemplate alibabaEcsFollowerTemplate = getTemplate();
         final Jenkins jenkinsInstance = Jenkins.get();
         if (jenkinsInstance.isQuietingDown()) {
             throw HttpResponses.error(SC_BAD_REQUEST, "Jenkins instance is quieting down");
@@ -372,17 +372,17 @@ public class AlibabaCloud extends Cloud {
             throw HttpResponses.error(SC_BAD_REQUEST, "Jenkins instance is terminating");
         }
         try {
-            slaveCountingLock.lock();
-            // check how many spare slaves should provision
+            followerCountingLock.lock();
+            // check how many spare followers should provision
             int aliveCount = 0;
             Computer[] computers = jenkinsInstance.getComputers();
             for (Computer computer : computers) {
                 if (computer instanceof AlibabaEcsComputer) {
-                    AlibabaEcsSpotSlave slave = ((AlibabaEcsComputer)computer).getNode();
-                    if(null == slave){
+                    AlibabaEcsSpotFollower follower = ((AlibabaEcsComputer)computer).getNode();
+                    if(null == follower){
                         continue;
                     }
-                   String templateId = slave.getTemplateId();
+                   String templateId = follower.getTemplateId();
                    if(StringUtils.isEmpty(templateId)){
                        continue;
                    }
@@ -391,22 +391,22 @@ public class AlibabaCloud extends Cloud {
                     }
                 }
             }
-            int provisionCount = alibabaEcsSlaveTemplate.getMinimumNumberOfInstances() - aliveCount;
+            int provisionCount = alibabaEcsFollowerTemplate.getMinimumNumberOfInstances() - aliveCount;
             if (provisionCount <= 0) {
                 log.info("no need provision. minimumNumberOfInstances:{} aliveCount:{}",
-                    alibabaEcsSlaveTemplate.getMinimumNumberOfInstances(), aliveCount);
+                    alibabaEcsFollowerTemplate.getMinimumNumberOfInstances(), aliveCount);
                 return HttpResponses.redirectViaContextPath("/computer/");
             }
-            List<AlibabaEcsSpotSlave> provision = alibabaEcsSlaveTemplate.provision(provisionCount);
+            List<AlibabaEcsSpotFollower> provision = alibabaEcsFollowerTemplate.provision(provisionCount);
             if (CollectionUtils.isEmpty(provision)) {
-                throw HttpResponses.error(SC_BAD_REQUEST, "slaveTemplate.provision error");
+                throw HttpResponses.error(SC_BAD_REQUEST, "followerTemplate.provision error");
             }
             // 将节点都加入jenkins里
-            for (AlibabaEcsSpotSlave alibabaEcsSpotSlave : provision) {
-                jenkinsInstance.addNode(alibabaEcsSpotSlave);
+            for (AlibabaEcsSpotFollower alibabaEcsSpotFollower : provision) {
+                jenkinsInstance.addNode(alibabaEcsSpotFollower);
             }
         } finally {
-            slaveCountingLock.unlock();
+            followerCountingLock.unlock();
         }
         return HttpResponses.redirectViaContextPath("/computer/");
     }
@@ -424,6 +424,7 @@ public class AlibabaCloud extends Cloud {
         }
 
         public FormValidation doCheckCloudName(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             try {
                 Jenkins.checkGoodName(value);
             } catch (Failure e) {
@@ -595,6 +596,7 @@ public class AlibabaCloud extends Cloud {
                 }
                 AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
                 List<Vpc> vpcs = client.describeVpcs();
+
                 for (DescribeVpcsResponse.Vpc vpc : vpcs) {
                     model.add(vpc.getVpcId(), vpc.getVpcId());
                 }
@@ -714,20 +716,20 @@ public class AlibabaCloud extends Cloud {
         }
     }
 
-    public List<AlibabaEcsSlaveTemplate> getTemplates() {
+    public List<AlibabaEcsFollowerTemplate> getTemplates() {
         return this.templates;
     }
 
-    public AlibabaEcsSlaveTemplate getTemplate(String template) {
-        for (AlibabaEcsSlaveTemplate alibabaEcsSlaveTemplate : templates) {
-            if (alibabaEcsSlaveTemplate.getTemplateId().equals(template)) {
-                return alibabaEcsSlaveTemplate;
+    public AlibabaEcsFollowerTemplate getTemplate(String template) {
+        for (AlibabaEcsFollowerTemplate alibabaEcsFollowerTemplate : templates) {
+            if (alibabaEcsFollowerTemplate.getTemplateId().equals(template)) {
+                return alibabaEcsFollowerTemplate;
             }
         }
         return null;
     }
 
-    public AlibabaEcsSlaveTemplate getTemplate() {
+    public AlibabaEcsFollowerTemplate getTemplate() {
         return getTemplate(CloudHelper.getTemplateId(zone, instanceType));
     }
 

@@ -81,8 +81,8 @@ public class AlibabaEcsStep extends Step {
             ListBoxModel r = new ListBoxModel();
             for (Cloud cList : jenkins.model.Jenkins.get().clouds) {
                 if (cList.getDisplayName().equals(cloud)) {
-                    List<AlibabaEcsSlaveTemplate> templates = ((AlibabaCloud)cList).getTemplates();
-                    for (AlibabaEcsSlaveTemplate template : templates) {
+                    List<AlibabaEcsFollowerTemplate> templates = ((AlibabaCloud)cList).getTemplates();
+                    for (AlibabaEcsFollowerTemplate template : templates) {
                         r.add(template.getTemplateId(), template.getTemplateId());
                     }
                 }
@@ -115,20 +115,20 @@ public class AlibabaEcsStep extends Step {
                     "Error in Alibaba Cloud. Please review Alibaba ECS settings in Jenkins configuration.");
             }
 
-            AlibabaEcsSlaveTemplate t;
+            AlibabaEcsFollowerTemplate t;
             t = ((AlibabaCloud)cl).getTemplate(template);
             if (null == t) {
                 throw new IllegalArgumentException(
                     "Error in Alibaba Cloud. Please review Alibaba ECS template defined in Jenkins configuration.");
             }
-            List<AlibabaEcsSpotSlave> instances = t.provision(1);
+            List<AlibabaEcsSpotFollower> instances = t.provision(1);
             if (instances == null) {
                 throw new IllegalArgumentException(
                     "Error in Alibaba Cloud. Please review Alibaba ECS defined in Jenkins configuration.");
             }
 
-            AlibabaEcsSpotSlave slave = instances.get(0);
-            return slave.describeNode();
+            AlibabaEcsSpotFollower follower = instances.get(0);
+            return follower.describeNode();
         }
     }
 }

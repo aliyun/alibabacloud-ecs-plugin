@@ -30,7 +30,7 @@ import org.kohsuke.stapler.StaplerRequest;
  * Created by kunlun.ykl on 2020/8/24.
  */
 @Slf4j
-public class AlibabaEcsSpotSlave extends Slave {
+public class AlibabaEcsSpotFollower extends Slave {
     private final String templateId;
     private final String cloudName;
     private String ecsInstanceId;
@@ -43,10 +43,10 @@ public class AlibabaEcsSpotSlave extends Slave {
 
     private boolean isConnected = false;
 
-    public AlibabaEcsSpotSlave(@Nonnull String ecsInstanceId, @Nonnull String name, ComputerLauncher launcher,
-                               String remoteFS,
-                               @Nonnull String cloudName, String labelString, String initScript,
-                               @Nonnull String templateId)
+    public AlibabaEcsSpotFollower(@Nonnull String ecsInstanceId, @Nonnull String name, ComputerLauncher launcher,
+                                  String remoteFS,
+                                  @Nonnull String cloudName, String labelString, String initScript,
+                                  @Nonnull String templateId)
         throws IOException, FormException {
         super(name, remoteFS, launcher);
         this.ecsInstanceId = ecsInstanceId;
@@ -71,9 +71,9 @@ public class AlibabaEcsSpotSlave extends Slave {
     }
 
     @DataBoundConstructor
-    public AlibabaEcsSpotSlave(@Nonnull String ecsInstanceId, @Nonnull String name, String remoteFS,
-                               @Nonnull String cloudName, String labelString, String initScript,
-                               @Nonnull String templateId)
+    public AlibabaEcsSpotFollower(@Nonnull String ecsInstanceId, @Nonnull String name, String remoteFS,
+                                  @Nonnull String cloudName, String labelString, String initScript,
+                                  @Nonnull String templateId)
         throws FormException, IOException {
         // TODO: create Launcher by ami type
         this(ecsInstanceId, name, new AlibabaEcsUnixComputerLauncher(), remoteFS, cloudName, labelString, initScript,
@@ -108,7 +108,7 @@ public class AlibabaEcsSpotSlave extends Slave {
             }
             return null;
         }
-        AlibabaEcsSpotSlave result = (AlibabaEcsSpotSlave)super.reconfigure(req, form);
+        AlibabaEcsSpotFollower result = (AlibabaEcsSpotFollower)super.reconfigure(req, form);
         return result;
     }
 
@@ -297,7 +297,7 @@ public class AlibabaEcsSpotSlave extends Slave {
     public static final class DescriptorImpl extends SlaveDescriptor {
         @Override
         public String getDisplayName() {
-            return "sample slave";
+            return "sample follower";
         }
 
         @Override

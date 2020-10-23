@@ -19,7 +19,7 @@ import org.apache.commons.lang.StringUtils;
  * Created by kunlun.ykl on 2020/8/25.
  */
 @Slf4j
-public class AlibabaEcsSlaveTemplate implements Describable<AlibabaEcsSlaveTemplate> {
+public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowerTemplate> {
     private String templateId;
     private String region;
     private String zone;
@@ -33,8 +33,8 @@ public class AlibabaEcsSlaveTemplate implements Describable<AlibabaEcsSlaveTempl
 
     private transient AlibabaCloud parent;
 
-    public AlibabaEcsSlaveTemplate(String region, String zone, String instanceType, int minimumNumberOfInstances,
-                                   String vsw, String initScript, String labelString, String remoteFs) {
+    public AlibabaEcsFollowerTemplate(String region, String zone, String instanceType, int minimumNumberOfInstances,
+                                      String vsw, String initScript, String labelString, String remoteFs) {
         this.region = region;
         this.zone = zone;
         this.instanceType = instanceType;
@@ -55,7 +55,7 @@ public class AlibabaEcsSlaveTemplate implements Describable<AlibabaEcsSlaveTempl
     }
 
     @Override
-    public Descriptor<AlibabaEcsSlaveTemplate> getDescriptor() {
+    public Descriptor<AlibabaEcsFollowerTemplate> getDescriptor() {
         return Jenkins.get().getDescriptor(getClass());
     }
 
@@ -95,15 +95,15 @@ public class AlibabaEcsSlaveTemplate implements Describable<AlibabaEcsSlaveTempl
         return remoteFs;
     }
 
-    public List<AlibabaEcsSpotSlave> provision(int amount) throws Exception {
-        List<AlibabaEcsSpotSlave> list = Lists.newArrayList();
+    public List<AlibabaEcsSpotFollower> provision(int amount) throws Exception {
+        List<AlibabaEcsSpotFollower> list = Lists.newArrayList();
         List<String> instanceIds = provisionSpot(amount);
         for (String instanceId : instanceIds) {
-            AlibabaEcsSpotSlave alibabaEcsSpotSlave = new AlibabaEcsSpotSlave(instanceId, templateId + "-" + instanceId,
+            AlibabaEcsSpotFollower alibabaEcsSpotFollower = new AlibabaEcsSpotFollower(instanceId, templateId + "-" + instanceId,
                 remoteFs,
                 parent.getDisplayName(), labelString, initScript, getTemplateId());
-            alibabaEcsSpotSlave.assignPublicIp();
-            list.add(alibabaEcsSpotSlave);
+            alibabaEcsSpotFollower.assignPublicIp();
+            list.add(alibabaEcsSpotFollower);
         }
         return list;
     }
@@ -136,7 +136,7 @@ public class AlibabaEcsSlaveTemplate implements Describable<AlibabaEcsSlaveTempl
     }
 
     @Extension
-    public static final class DescriptorImpl extends Descriptor<AlibabaEcsSlaveTemplate> {
+    public static final class DescriptorImpl extends Descriptor<AlibabaEcsFollowerTemplate> {
 
         @Override
         public String getDisplayName() {

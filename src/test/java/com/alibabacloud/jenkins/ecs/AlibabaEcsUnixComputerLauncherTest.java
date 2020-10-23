@@ -24,12 +24,12 @@ public class AlibabaEcsUnixComputerLauncherTest {
     @Test
     public void launchTest() throws IOException, FormException {
         AlibabaEcsUnixComputerLauncher launcher = new AlibabaEcsUnixComputerLauncher();
-        AlibabaEcsSpotSlave slave = new AlibabaEcsSpotSlave("slave", "slave", launcher, "remoteFS", "ECS Spot", "",
+        AlibabaEcsSpotFollower follower = new AlibabaEcsSpotFollower("follower", "follower", launcher, "remoteFS", "ECS Spot", "",
             "echo hello",
             "sample");
-        r.jenkins.addNode(slave);
+        r.jenkins.addNode(follower);
 
-        SlaveComputer slaveComputer = new SlaveComputer(slave);
+        SlaveComputer slaveComputer = new SlaveComputer(follower);
         TaskListener listener = new TaskListener() {
             @Nonnull
             @Override

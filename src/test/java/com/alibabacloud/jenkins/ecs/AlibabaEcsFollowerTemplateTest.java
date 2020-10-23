@@ -1,10 +1,7 @@
 package com.alibabacloud.jenkins.ecs;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-
-import com.alibaba.fastjson.JSON;
 
 import com.alibabacloud.credentials.plugin.auth.AlibabaPrivateKey;
 import com.alibabacloud.jenkins.ecs.client.AlibabaEcsClient;
@@ -29,7 +26,7 @@ import static org.mockito.Mockito.when;
         {"javax.crypto.*", "org.hamcrest.*", "javax.net.ssl.*", "com.sun.org.apache.xerces.*", "javax.xml.*", "org.xml.*"})
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({AlibabaCloud.class, AlibabaEcsClient.class,AlibabaPrivateKey.class})
-public class AlibabaEcsSlaveTemplateTest {
+public class AlibabaEcsFollowerTemplateTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
@@ -53,12 +50,12 @@ public class AlibabaEcsSlaveTemplateTest {
 
     @Test
     public void provisionSpotTest() throws Exception {
-        AlibabaEcsSlaveTemplate alibabaEcsSlaveTemplate = new AlibabaEcsSlaveTemplate("cn-beijing", "cn-beijing-a", "ecs.sn1.large", 1, "vsw-aaa", "",
+        AlibabaEcsFollowerTemplate alibabaEcsFollowerTemplate = new AlibabaEcsFollowerTemplate("cn-beijing", "cn-beijing-a", "ecs.sn1.large", 1, "vsw-aaa", "",
             "", "/root");
 
-        alibabaEcsSlaveTemplate.setParent(alibabaCloud);
+        alibabaEcsFollowerTemplate.setParent(alibabaCloud);
 
-        List<String> instanceIds = alibabaEcsSlaveTemplate.provisionSpot(1);
+        List<String> instanceIds = alibabaEcsFollowerTemplate.provisionSpot(1);
         Assert.assertEquals(instanceIds,instances);
     }
 }
