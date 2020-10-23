@@ -9,7 +9,7 @@
         <relativePath/>
     </parent>
     <groupId>com.alibabacloud.jenkins</groupId>
-    <artifactId>alibabacloud-ecs-jenkins</artifactId>
+    <artifactId>alibabacloud-ecs</artifactId>
     <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <properties>
@@ -167,7 +167,7 @@
         </dependency>
         <dependency>
             <groupId>com.alibabacloud.jenkins</groupId>
-            <artifactId>alibabacloud-credentials-jenkins</artifactId>
+            <artifactId>alibabacloud-credentials</artifactId>
             <version>1.0</version>
         </dependency>
     </dependencies>
