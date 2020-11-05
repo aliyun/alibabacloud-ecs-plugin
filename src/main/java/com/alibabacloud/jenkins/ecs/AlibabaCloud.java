@@ -44,6 +44,7 @@ import hudson.model.ItemGroup;
 import hudson.model.Label;
 import hudson.model.PeriodicWork;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner.PlannedNode;
 import hudson.util.FormValidation;
@@ -423,8 +424,10 @@ public class AlibabaCloud extends Cloud {
             return "Alibaba Cloud ECS";
         }
 
+        @RequirePOST
         public FormValidation doCheckCloudName(@QueryParameter String value) {
-            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             try {
                 Jenkins.checkGoodName(value);
             } catch (Failure e) {

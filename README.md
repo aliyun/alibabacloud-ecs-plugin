@@ -45,7 +45,8 @@ Jenkins authentication, add "alibaba cloud credential" and fill in AK and sk of 
 * Then select region, image, VPC, security group
 
 * When configuring the ECS SSH key, click the Add button to get Jenkins, authenticate, and add the contents of the ECS.
-PEM file obtained from the ECS console of alibabacloud and fill in
+PEM file obtained from the ECS console of alibabacloud and fill in.
+* Currently, only "SSH username with private key" is supported.
 ![](docs/images/jenkins.SSH.png)
 * You can click test to see if it works.
 ![](docs/images/jenkins.conn.png)
@@ -68,6 +69,18 @@ packages that you need for your builds and tests.
 ![](docs/images/jenkins.configSpot.png)
 * Click Configure to view the follower node information
 ![](docs/images/jenkins.detailFollower.png)
+#Some known problems in use
+* When you click the Save button, if the "SSH username with private key" connection test fails, the save 
+will succeed, but "provision node" will report an error of "a problem occurred while processing the request". 
+Therefore, please ensure that the connection is successful before saving.
+* Examples are as follows:
+![](docs/images/jenkins.cloud.primaryKey.png)
+![](docs/images/jenkins.provision.png)
+![](docs/images/jenkins.error.png)
+
+
+
+
 
 
 
