@@ -118,6 +118,10 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
         request.setVSwitchId(vswId);
         request.setImageId(parent.getImage());
         request.setSecurityGroupId(parent.getSecurityGroup());
+        if(null == parent.getPrivateKey()){
+            log.error("provision error privateKey is empty.");
+            throw new AlibabaEcsException("provision error privateKey is empty.");
+        }
         String keyPairName = parent.getPrivateKey().getKeyPairName();
         if (StringUtils.isBlank(keyPairName)) {
             log.error("provision error keyPairName is empty.");

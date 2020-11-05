@@ -2,6 +2,7 @@ package com.alibabacloud.jenkins.ecs.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -75,8 +76,8 @@ public class AlibabaEcsClient {
 
     public AlibabaEcsClient(AlibabaCloudCredentials credentials, String regionNo) {
         IClientProfile profile = DefaultProfile.getProfile(regionNo,
-            credentials.getAccessKeyId(),
-            credentials.getAccessKeySecret());
+                credentials.getAccessKeyId(),
+                credentials.getAccessKeySecret());
         this.client = new DefaultAcsClient(profile);
         this.regionNo = regionNo;
         log.info("AlibabaEcsClient init success. regionNo: {}", regionNo);
@@ -118,12 +119,44 @@ public class AlibabaEcsClient {
         request.setPageSize(MAX_PAGE_SIZE);
         request.setSysRegionId(regionNo);
         List<Vpc> vpcList = new ArrayList<>();
-        try {
-            describeVpcs(vpcList, request);
-        } catch (Exception e) {
-            log.error("describeVpcs error.", e);
-        }
+        DescribeVpcsResponse acsResponse = new DescribeVpcsResponse();
+        acsResponse.setVpcs(vpcList);
+        do {
+            try {
+                acsResponse = client.getAcsResponse(request);
+                if (null == acsResponse || CollectionUtils.isEmpty(acsResponse.getVpcs())) {
+                    break;
+                }
+                vpcList.addAll(acsResponse.getVpcs());
+            } catch (Exception e) {
+                log.error("describeVpcs error.regionId is : {}", regionNo, e);
+            }
+            request.setPageNumber(request.getPageNumber() + 1);
+        } while (acsResponse.getVpcs().size() == MAX_PAGE_SIZE);
+
         return vpcList;
+    }
+
+    public Vpc describeVpc(String vpcId) {
+        if (StringUtils.isEmpty(vpcId)) {
+            log.error("vpcId is not null");
+        }
+        DescribeVpcsRequest request = new DescribeVpcsRequest();
+
+        request.setSysRegionId(regionNo);
+        request.setVpcId(vpcId);
+        DescribeVpcsResponse acsResponse = null;
+        Vpc vpcInstance = null;
+        try {
+            acsResponse = client.getAcsResponse(request);
+            if (null != acsResponse && null != acsResponse.getVpcs() && !acsResponse.getVpcs().isEmpty()) {
+                vpcInstance = acsResponse.getVpcs().get(0);
+            }
+
+        } catch (Exception e) {
+            log.error("describeVpc error.regionId is : {},vpcId is :{}", regionNo, vpcId, e);
+        }
+        return vpcInstance;
     }
 
     public String createVpc(String cidrBlock) {
@@ -133,7 +166,7 @@ public class AlibabaEcsClient {
             request.setCidrBlock(cidrBlock);
             CreateVpcResponse acsResponse = client.getAcsResponse(request);
             log.info("createVpc success. region: {} cidrBlock: {} vpcId: {}", regionNo, cidrBlock,
-                acsResponse.getVpcId());
+                    acsResponse.getVpcId());
             return acsResponse.getVpcId();
         } catch (Exception e) {
             log.error("createVpc error.", e);
@@ -167,7 +200,7 @@ public class AlibabaEcsClient {
                 return null;
             }
             log.info("createSecurityGroup success. vpcId: {} securityGroupId: {}", vpcId,
-                acsResponse.getSecurityGroupId());
+                    acsResponse.getSecurityGroupId());
             return acsResponse.getSecurityGroupId();
         } catch (Exception e) {
             log.error("createSecurityGroup error. vpcId: {}", vpcId, e);
@@ -186,7 +219,7 @@ public class AlibabaEcsClient {
             authRequest.setSourceCidrIp(sourceCidrIp);
             client.getAcsResponse(authRequest);
             log.info("authorizeSecurityGroup success. protocol: {} portRange: {} securityGroupId: {} sourceCidrIp: {}",
-                protocol, portRange, securityGroupId, sourceCidrIp);
+                    protocol, portRange, securityGroupId, sourceCidrIp);
             return true;
         } catch (Exception e) {
             log.error("authorizeSecurityGroup error. securityGroupId: {}", securityGroupId, e);
@@ -264,7 +297,7 @@ public class AlibabaEcsClient {
             createVswRequest.setCidrBlock(cidrBlock);
             CreateVSwitchResponse acsResponse = client.getAcsResponse(createVswRequest);
             log.info("createVsw success. zone: {} vpc: {} cidrBlock: {} vswId: {}",
-                zone, vpc, cidrBlock, acsResponse.getVSwitchId());
+                    zone, vpc, cidrBlock, acsResponse.getVSwitchId());
             return acsResponse.getVSwitchId();
         } catch (Exception e) {
             log.error("createVsw error.", e);
@@ -299,7 +332,7 @@ public class AlibabaEcsClient {
                     }
                     for (SupportedResource supportedResource : availableResource.getSupportedResources()) {
                         if ("Available".equals(supportedResource.getStatus()) && "WithStock".equals(
-                            supportedResource.getStatusCategory())) {
+                                supportedResource.getStatusCategory())) {
                             instanceTypes.add(supportedResource.getValue());
                         }
                     }
@@ -410,20 +443,4 @@ public class AlibabaEcsClient {
         return null;
     }
 
-    private void describeVpcs(List<Vpc> vpcList, DescribeVpcsRequest request) throws ClientException {
-
-
-        DescribeVpcsResponse acsResponse = client.getAcsResponse(request);
-        if (CollectionUtils.isEmpty(acsResponse.getVpcs())) {
-            return;
-        }
-        vpcList.addAll(acsResponse.getVpcs());
-        if (acsResponse.getVpcs().size() < MAX_PAGE_SIZE) {
-            return;
-        }
-        request.setPageNumber(request.getPageNumber() + 1);
-        describeVpcs(vpcList, request);
-
-
-    }
 }
