@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 @PowerMockIgnore(
     {"javax.crypto.*", "org.hamcrest.*", "javax.net.ssl.*", "com.sun.org.apache.xerces.*", "javax.xml.*", "org.xml.*"})
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({AlibabaEcsSpotSlave.class, AlibabaEcsSlaveTemplate.class})
+@PrepareForTest({AlibabaEcsSpotFollower.class, AlibabaEcsFollowerTemplate.class})
 public class AlibabaEcsStepTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
@@ -36,22 +36,22 @@ public class AlibabaEcsStepTest {
     private AlibabaCloud cl;
 
     @Mock
-    AlibabaEcsSpotSlave slave;
+    AlibabaEcsSpotFollower follower;
 
     @Mock
-    AlibabaEcsSlaveTemplate template;
+    AlibabaEcsFollowerTemplate template;
 
     @Before
     public void setup() throws Exception {
-        List<AlibabaEcsSlaveTemplate> templates = Lists.newArrayList();
+        List<AlibabaEcsFollowerTemplate> templates = Lists.newArrayList();
         templates.add(template);
         when(cl.getDisplayName()).thenReturn("Alibaba Cloud ECS");
         when(cl.getTemplates()).thenReturn(templates);
         when(cl.getTemplate(anyString())).thenReturn(template);
         r.jenkins.clouds.add(cl);
 
-        when(slave.getNodeName()).thenReturn("nodeName");
-        List<AlibabaEcsSpotSlave> slaves = Collections.singletonList(slave);
+        when(follower.getNodeName()).thenReturn("nodeName");
+        List<AlibabaEcsSpotFollower> slaves = Collections.singletonList(follower);
         when(template.provision(anyInt())).thenReturn(slaves);
     }
 

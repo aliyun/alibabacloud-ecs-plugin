@@ -21,8 +21,8 @@
         <aliyun-java-sdk.version>4.5.6</aliyun-java-sdk.version>
         <aliyun-ecs-java-sdk.version>4.19.9</aliyun-ecs-java-sdk.version>
     </properties>
-    <name>Aliyun ECS Plugin</name>
-    <description>This is a Jenkins plugin to support ephemeral Jenkins agents on Aliyun ECS</description>
+    <name>Alibaba Cloud ECS Plugin</name>
+    <description>This is a Jenkins plugin to support ephemeral Jenkins agents on Alibaba Cloud ECS</description>
     <licenses>
         <license>
             <name>The MIT License</name>

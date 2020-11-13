@@ -32,7 +32,7 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
     @Override
     protected void launchScript(AlibabaEcsComputer computer, TaskListener listener) {
         log.info("launchScript start...");
-        AlibabaEcsSpotSlave node = computer.getNode();
+        AlibabaEcsSpotFollower node = computer.getNode();
         if (node == null) {
             LogHelper.error(log, listener, "node is null", null);
             throw new IllegalStateException("node is null");
@@ -49,7 +49,7 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
         }
         Connection conn = null;
         try {
-            // 1. ssh connect to slave
+            // 1. ssh connect to follower
             File identityKeyFile = createIdentityKeyFile(listener, computer);
             conn = connectToSsh(computer, listener);
 
@@ -76,7 +76,7 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
             // 3. scp remoting.jar
             scp.put(Jenkins.get().getJnlpJars("remoting.jar").readFully(), "remoting.jar", tmpDir);
 
-            // 4. 启动slave的jenkins进程
+            // 4. 启动follower的jenkins进程
             String workDir = StringUtils.isNotBlank(remoteFs) ? remoteFs : tmpDir;
             String launchString
                     = "java -jar " + tmpDir + "/remoting.jar -workDir " + workDir + " -jar-cache "
@@ -145,11 +145,11 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
             }
             try {
                 LogHelper.info(log, listener, "try to connect to ssh.", null);
-                AlibabaEcsSpotSlave slave = computer.getNode();
-                if (null == slave) {
-                    throw new AlibabaEcsException("alibabaEcsSpotSlave is null");
+                AlibabaEcsSpotFollower follower = computer.getNode();
+                if (null == follower) {
+                    throw new AlibabaEcsException("alibabaEcsSpotFollower is null");
                 }
-                String publicIp = slave.getPublicIp();
+                String publicIp = follower.getPublicIp();
 
                 if (StringUtils.isEmpty(publicIp)) {
                     throw new AlibabaEcsException("public ip is null");

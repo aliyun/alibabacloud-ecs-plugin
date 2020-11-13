@@ -5,8 +5,8 @@
         <f:textbox default="Ecs Spot"/>
     </f:entry>
     <f:entry field="credentialsId" title="${%Alibaba Cloud Credentials}"
-             description="Aliyun IAM Access Key used to connect to ECS. If not specified, implicit authentication mechanisms are used (IAM roles...)">
-        <c:select default="${it.credentialsId}"/>
+             description="Alibaba Cloud IAM Access Key used to connect to ECS. If not specified, implicit authentication mechanisms are used (IAM roles...)">
+        <c:select default="${it.credentialsId}" includeUser="false"/>
     </f:entry>
 
     <f:entry title="${%Region}" field="region">
