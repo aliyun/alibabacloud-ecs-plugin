@@ -61,6 +61,8 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
+import static hudson.security.Permission.CREATE;
+import static hudson.security.Permission.UPDATE;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 /**
@@ -164,9 +166,24 @@ public class AlibabaCloud extends Cloud {
             return vsws.get(0).getVSwitchId();
         }
 
+        Vpc vpcInstance = null;
+        if (StringUtils.isNotEmpty(vpc)) {
+            vpcInstance = connection.describeVpc(vpc);
+            return "";
+        }
+
+        if(null == vpcInstance){
+            log.error("describe vpc is error");
+            return "";
+        }
         // TODO: auot generate cidr block
-        String cidrBlock = "172.16.0.0/24";
-        String vsw = connection.createVsw(zone, vpc, cidrBlock);
+//        String cidrBlock = "172.16.0.0/24";
+        String cidrBlock = vpcInstance.getCidrBlock();
+        String[] ips = cidrBlock.split("/");
+        String subnet = String.valueOf(Integer.parseInt(ips[1])+4);
+        log.info("cidrBlock is {}",cidrBlock);
+        String newCidrBlock = ips[0]+"/"+subnet;
+        String vsw = connection.createVsw(zone, vpc, newCidrBlock);
         // TODO: handle exception
         return vsw;
     }
@@ -234,12 +251,12 @@ public class AlibabaCloud extends Cloud {
         if (sshKey != null) {
             try {
                 BasicSSHUserPrivateKey sshCredential = getSshCredential(sshKey);
-                if(null == sshCredential){
+                if (null == sshCredential) {
                     throw new AlibabaEcsException("sshCredential  is null");
                 }
                 AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
                 KeyPair keyPair = AlibabaKeyPairUtils.find(sshCredential.getPrivateKey(), credentials,
-                    getRegion());
+                        getRegion());
                 privateKey = new AlibabaPrivateKey(sshCredential.getPrivateKey(), keyPair.getKeyPairName());
             } catch (Exception e) {
                 log.error("resolvePrivateKey error. sshKey: {}", sshKey, e);
@@ -252,12 +269,12 @@ public class AlibabaCloud extends Cloud {
     private static BasicSSHUserPrivateKey getSshCredential(String id) {
 
         BasicSSHUserPrivateKey credential = CredentialsMatchers.firstOrNull(
-            CredentialsProvider.lookupCredentials(
-                BasicSSHUserPrivateKey.class, // (1)
-                (ItemGroup)null,
-                null,
-                Collections.emptyList()),
-            CredentialsMatchers.withId(id));
+                CredentialsProvider.lookupCredentials(
+                        BasicSSHUserPrivateKey.class, // (1)
+                        (ItemGroup) null,
+                        null,
+                        Collections.emptyList()),
+                CredentialsMatchers.withId(id));
 
         if (credential == null) {
             log.error("getSshCredential error. id: {}", id);
@@ -379,14 +396,14 @@ public class AlibabaCloud extends Cloud {
             Computer[] computers = jenkinsInstance.getComputers();
             for (Computer computer : computers) {
                 if (computer instanceof AlibabaEcsComputer) {
-                    AlibabaEcsSpotFollower follower = ((AlibabaEcsComputer)computer).getNode();
-                    if(null == follower){
+                    AlibabaEcsSpotFollower follower = ((AlibabaEcsComputer) computer).getNode();
+                    if (null == follower) {
                         continue;
                     }
-                   String templateId = follower.getTemplateId();
-                   if(StringUtils.isEmpty(templateId)){
-                       continue;
-                   }
+                    String templateId = follower.getTemplateId();
+                    if (StringUtils.isEmpty(templateId)) {
+                        continue;
+                    }
                     if (template.equals(templateId)) {
                         aliveCount++;
                     }
@@ -457,30 +474,36 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillCredentialsIdItems() {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             return new StandardListBoxModel()
-                .withEmptySelection()
-                .withMatching(
-                    CredentialsMatchers.always(),
-                    CredentialsProvider.lookupCredentials(AlibabaCredentials.class,
-                        Jenkins.get(),
-                        ACL.SYSTEM,
-                        Collections.emptyList()));
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.always(),
+                            CredentialsProvider.lookupCredentials(AlibabaCredentials.class,
+                                    Jenkins.get(),
+                                    ACL.SYSTEM,
+                                    Collections.emptyList()));
         }
 
         public ListBoxModel doFillSshKeyItems(@QueryParameter String sshKey) {
             StandardListBoxModel result = new StandardListBoxModel();
 
             return result
-                .includeMatchingAs(Jenkins.getAuthentication(), Jenkins.get(), BasicSSHUserPrivateKey.class,
-                    Collections.<DomainRequirement>emptyList(), CredentialsMatchers.always())
-                .includeMatchingAs(ACL.SYSTEM, Jenkins.get(), BasicSSHUserPrivateKey.class,
-                    Collections.<DomainRequirement>emptyList(), CredentialsMatchers.always())
-                .includeCurrentValue(sshKey);
+                    .includeMatchingAs(Jenkins.getAuthentication(), Jenkins.get(), BasicSSHUserPrivateKey.class,
+                            Collections.<DomainRequirement>emptyList(), CredentialsMatchers.always())
+                    .includeMatchingAs(ACL.SYSTEM, Jenkins.get(), BasicSSHUserPrivateKey.class,
+                            Collections.<DomainRequirement>emptyList(), CredentialsMatchers.always())
+                    .includeCurrentValue(sshKey);
         }
 
         @RequirePOST
         public FormValidation doTestConnection(@QueryParameter String credentialsId, @QueryParameter String sshKey,
                                                @QueryParameter String region) {
+            if(!Jenkins.get().hasPermission(CREATE) && Jenkins.get().hasPermission(UPDATE)){
+                return FormValidation.error("permission is error");
+            }
+
             if (StringUtils.isBlank(credentialsId)) {
                 return FormValidation.error("Credentials not specificed");
             }
@@ -491,8 +514,8 @@ public class AlibabaCloud extends Cloud {
             AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
             if (credentials == null) {
                 log.error(
-                    "doTestConnection error. credentials not found. region: {} credentialsId: {}",
-                    DEFAULT_ECS_REGION, credentialsId);
+                        "doTestConnection error. credentials not found. region: {} credentialsId: {}",
+                        DEFAULT_ECS_REGION, credentialsId);
                 return FormValidation.error("Credentials not found");
             }
             AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -509,7 +532,7 @@ public class AlibabaCloud extends Cloud {
                 // 2. 校验SSHKey是否存在
                 BasicSSHUserPrivateKey sshCredential = getSshCredential(sshKey);
                 KeyPair keyPair = AlibabaKeyPairUtils.find(sshCredential.getPrivateKey(), credentials,
-                    region);
+                        region);
                 if (null == keyPair) {
                     return FormValidation.error("Illegal SSH PrivateKey: " + sshKey);
                 }
@@ -522,13 +545,15 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillRegionItems(@QueryParameter String credentialsId) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             try {
                 AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
                 if (credentials == null) {
                     log.error(
-                        "doFillImageItems error. credentials not found. region: {} credentialsId: {}",
-                        DEFAULT_ECS_REGION, credentialsId);
+                            "doFillImageItems error. credentials not found. region: {} credentialsId: {}",
+                            DEFAULT_ECS_REGION, credentialsId);
                     return model;
                 }
                 AlibabaEcsClient client = new AlibabaEcsClient(credentials, DEFAULT_ECS_REGION);
@@ -544,6 +569,8 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillImageItems(@QueryParameter String credentialsId, @QueryParameter String region) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region)) {
                 return model;
@@ -552,8 +579,8 @@ public class AlibabaCloud extends Cloud {
                 AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
                 if (credentials == null) {
                     log.error(
-                        "doFillImageItems error. credentials not found. region: {} credentialsId: {}",
-                        region, credentialsId);
+                            "doFillImageItems error. credentials not found. region: {} credentialsId: {}",
+                            region, credentialsId);
                     return model;
                 }
                 AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -572,18 +599,22 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillKeyPairItems() {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             return new StandardListBoxModel()
-                .withEmptySelection()
-                .withMatching(
-                    CredentialsMatchers.always(),
-                    CredentialsProvider.lookupCredentials(AlibabaCredentials.class,
-                        Jenkins.get(),
-                        ACL.SYSTEM,
-                        Collections.emptyList()));
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.always(),
+                            CredentialsProvider.lookupCredentials(AlibabaCredentials.class,
+                                    Jenkins.get(),
+                                    ACL.SYSTEM,
+                                    Collections.emptyList()));
         }
 
         @RequirePOST
         public ListBoxModel doFillVpcItems(@QueryParameter String credentialsId, @QueryParameter String region) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             model.add("<not specified>", "");
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region)) {
@@ -593,8 +624,8 @@ public class AlibabaCloud extends Cloud {
                 AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
                 if (credentials == null) {
                     log.error(
-                        "doFillVpcItems error. credentials not found. region: {} credentialsId: {}",
-                        region, credentialsId);
+                            "doFillVpcItems error. credentials not found. region: {} credentialsId: {}",
+                            region, credentialsId);
                     return model;
                 }
                 AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -613,6 +644,8 @@ public class AlibabaCloud extends Cloud {
         @RequirePOST
         public ListBoxModel doFillSecurityGroupItems(@QueryParameter String credentialsId,
                                                      @QueryParameter String region, @QueryParameter String vpc) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             model.add("<not specified>", "");
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region) || StringUtils.isBlank(vpc)) {
@@ -622,8 +655,8 @@ public class AlibabaCloud extends Cloud {
                 AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
                 if (credentials == null) {
                     log.error(
-                        "doFillSecurityGroupItems error. credentials not found. region: {} vpc: {} credentialsId: {}",
-                        region, vpc, credentialsId);
+                            "doFillSecurityGroupItems error. credentials not found. region: {} vpc: {} credentialsId: {}",
+                            region, vpc, credentialsId);
                     return model;
                 }
                 AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -639,7 +672,9 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillZoneItems(
-            @QueryParameter String credentialsId, @QueryParameter String region) {
+                @QueryParameter String credentialsId, @QueryParameter String region) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             model.add("<not specified>", "");
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region)) {
@@ -648,8 +683,8 @@ public class AlibabaCloud extends Cloud {
             AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
             if (credentials == null) {
                 log.error(
-                    "doFillZoneItems error. credentials not found. region: {} credentialsId: {}",
-                    region, credentialsId);
+                        "doFillZoneItems error. credentials not found. region: {} credentialsId: {}",
+                        region, credentialsId);
                 return model;
             }
             AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -662,8 +697,10 @@ public class AlibabaCloud extends Cloud {
 
         @RequirePOST
         public ListBoxModel doFillVswItems(
-            @QueryParameter String credentialsId, @QueryParameter String region, @QueryParameter String vpc,
-            @QueryParameter String zone) {
+                @QueryParameter String credentialsId, @QueryParameter String region, @QueryParameter String vpc,
+                @QueryParameter String zone) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel model = new ListBoxModel();
             model.add("<not specified>", "");
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region) || StringUtils.isBlank(zone)) {
@@ -672,8 +709,8 @@ public class AlibabaCloud extends Cloud {
             AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
             if (credentials == null) {
                 log.error(
-                    "doFillVswItems error. credentials not found. region: {} credentialsId: {}",
-                    region, credentialsId);
+                        "doFillVswItems error. credentials not found. region: {} credentialsId: {}",
+                        region, credentialsId);
                 return model;
             }
             AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -687,6 +724,8 @@ public class AlibabaCloud extends Cloud {
         @RequirePOST
         public ListBoxModel doFillInstanceTypeItems(@QueryParameter String credentialsId, @QueryParameter String region,
                                                     @QueryParameter String zone) {
+            Jenkins.get().checkPermission(Permission.CREATE);
+            Jenkins.get().checkPermission(Permission.UPDATE);
             ListBoxModel items = new ListBoxModel();
             items.add("<not specified>", "");
             if (StringUtils.isBlank(credentialsId) || StringUtils.isBlank(region) || StringUtils.isBlank(zone)) {
@@ -695,8 +734,8 @@ public class AlibabaCloud extends Cloud {
             AlibabaCredentials credentials = CredentialsHelper.getCredentials(credentialsId);
             if (credentials == null) {
                 log.error(
-                    "doFillInstanceTypeItems error. credentials not found. region: {} credentialsId: {}",
-                    region, credentialsId);
+                        "doFillInstanceTypeItems error. credentials not found. region: {} credentialsId: {}",
+                        region, credentialsId);
                 return items;
             }
             AlibabaEcsClient client = new AlibabaEcsClient(credentials, region);
@@ -754,7 +793,7 @@ public class AlibabaCloud extends Cloud {
                 if (!(cloud instanceof AlibabaCloud)) {
                     continue;
                 }
-                AlibabaCloud alibabaCloud = (AlibabaCloud)cloud;
+                AlibabaCloud alibabaCloud = (AlibabaCloud) cloud;
                 log.info("Checking Alibaba Cloud Connection on: {}", alibabaCloud.getDisplayName());
                 List<Region> regions = Lists.newArrayList();
                 if (alibabaCloud.connection != null) {

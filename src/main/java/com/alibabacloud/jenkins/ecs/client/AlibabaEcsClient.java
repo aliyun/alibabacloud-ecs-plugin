@@ -2,8 +2,11 @@ package com.alibabacloud.jenkins.ecs.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
+
+
 
 import com.alibaba.fastjson.JSON;
 
@@ -118,8 +121,8 @@ public class AlibabaEcsClient {
         request.setPageSize(MAX_PAGE_SIZE);
         request.setSysRegionId(regionNo);
         List<Vpc> vpcList = new ArrayList<>();
-        DescribeVpcsResponse acsResponse = null;
-
+        DescribeVpcsResponse acsResponse = new DescribeVpcsResponse();
+        acsResponse.setVpcs(vpcList);
         do {
             try {
                 acsResponse = client.getAcsResponse(request);
@@ -128,13 +131,34 @@ public class AlibabaEcsClient {
                 }
                 vpcList.addAll(acsResponse.getVpcs());
             } catch (Exception e) {
-                log.error("describeVpcs error.regionId is :  "+regionNo);
-                log.error("describeVpcs error. ", e);
+                log.error("describeVpcs error.regionId is : {}", regionNo, e);
             }
             request.setPageNumber(request.getPageNumber() + 1);
         } while (acsResponse.getVpcs().size() == MAX_PAGE_SIZE);
 
         return vpcList;
+    }
+
+    public Vpc describeVpc(String vpcId) {
+        if (StringUtils.isEmpty(vpcId)) {
+            log.error("vpcId is not null");
+        }
+        DescribeVpcsRequest request = new DescribeVpcsRequest();
+
+        request.setSysRegionId(regionNo);
+        request.setVpcId(vpcId);
+        DescribeVpcsResponse acsResponse = null;
+        Vpc vpcInstance = null;
+        try {
+            acsResponse = client.getAcsResponse(request);
+            if (null != acsResponse && null != acsResponse.getVpcs() && !acsResponse.getVpcs().isEmpty()) {
+                vpcInstance = acsResponse.getVpcs().get(0);
+            }
+
+        } catch (Exception e) {
+            log.error("describeVpc error.regionId is : {},vpcId is :{}", regionNo, vpcId, e);
+        }
+        return vpcInstance;
     }
 
     public String createVpc(String cidrBlock) {
@@ -326,6 +350,9 @@ public class AlibabaEcsClient {
     public List<KeyPair> describeKeyPairs(@Nullable String keyPairName, @Nullable String pfp) {
         try {
             DescribeKeyPairsRequest request = new DescribeKeyPairsRequest();
+          
+         
+          
             request.setSysRegionId(regionNo);
             request.setKeyPairName(keyPairName);
             request.setKeyPairFingerPrint(pfp);
