@@ -144,8 +144,8 @@ public class AlibabaCloud extends Cloud {
         this.labelString = labelString;
 
         AlibabaEcsFollowerTemplate template = new AlibabaEcsFollowerTemplate(region, zone, instanceType,
-                minimumNumberOfInstances, vsw,
-                initScript, labelString, remoteFs);
+            minimumNumberOfInstances, vsw,
+            initScript, labelString, remoteFs);
         templates = Lists.newArrayList(template);
         readResolve();
     }
@@ -412,7 +412,7 @@ public class AlibabaCloud extends Cloud {
             int provisionCount = alibabaEcsFollowerTemplate.getMinimumNumberOfInstances() - aliveCount;
             if (provisionCount <= 0) {
                 log.info("no need provision. minimumNumberOfInstances:{} aliveCount:{}",
-                        alibabaEcsFollowerTemplate.getMinimumNumberOfInstances(), aliveCount);
+                    alibabaEcsFollowerTemplate.getMinimumNumberOfInstances(), aliveCount);
                 return HttpResponses.redirectViaContextPath("/computer/");
             }
             List<AlibabaEcsSpotFollower> provision = alibabaEcsFollowerTemplate.provision(provisionCount);

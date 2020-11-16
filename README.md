@@ -1,4 +1,4 @@
-# Alibabacloud ecs plugin
+# Alibabacloud ECS plugin
 
 # Introduction
 This plugin extends Jenkins slave node generation (node provision), in the case of high concurrent 
