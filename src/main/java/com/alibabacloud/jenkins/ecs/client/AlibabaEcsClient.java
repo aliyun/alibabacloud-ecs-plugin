@@ -271,7 +271,9 @@ public class AlibabaEcsClient {
         try {
             DescribeVSwitchesRequest describeZonesRequest = new DescribeVSwitchesRequest();
             describeZonesRequest.setSysRegionId(regionNo);
-            describeZonesRequest.setZoneId(zone);
+            if (StringUtils.isNotEmpty(zone)) {
+                describeZonesRequest.setZoneId(zone);
+            }
             describeZonesRequest.setVpcId(vpc);
             DescribeVSwitchesResponse acsResponse = client.getAcsResponse(describeZonesRequest);
             if (CollectionUtils.isEmpty(acsResponse.getVSwitches())) {

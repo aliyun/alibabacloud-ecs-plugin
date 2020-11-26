@@ -1,9 +1,6 @@
 package com.alibabacloud.jenkins.ecs;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -161,11 +158,14 @@ public class AlibabaCloud extends Cloud {
     }
 
     private String getOrCreateDefaultVsw(String vpc, String zone) {
-        List<VSwitch> vsws = connection.describeVsws(zone, vpc);
-        if (!vsws.isEmpty()) {
-            return vsws.get(0).getVSwitchId();
+        List<VSwitch> vsws = connection.describeVsws("", vpc);
+        List<String> otherSubCidrBlocks = Lists.newArrayList();
+        for (VSwitch vswitch : vsws) {
+            if (vswitch.getZoneId().equals(zone)) {
+                return vswitch.getVSwitchId();
+            }
+            otherSubCidrBlocks.add(vswitch.getCidrBlock());
         }
-
         Vpc vpcInstance = null;
         if (StringUtils.isNotEmpty(vpc)) {
             vpcInstance = connection.describeVpc(vpc);
@@ -176,7 +176,7 @@ public class AlibabaCloud extends Cloud {
             return "";
         }
         String cidrBlock = vpcInstance.getCidrBlock();
-        String newCidrBlock = NetworkUtils.autoGenerateSubnet(cidrBlock, 2);
+        String newCidrBlock = NetworkUtils.autoGenerateSubnet(cidrBlock, otherSubCidrBlocks);
         String vsw = connection.createVsw(zone, vpc, newCidrBlock);
         return vsw;
     }
