@@ -1,6 +1,7 @@
 package com.alibabacloud.jenkins.ecs.util;
 
 import com.google.common.collect.Lists;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -21,26 +22,27 @@ public class NetworkUtilsTest {
 //        otherVswCidrBlocks.add("172.16.1.0/23");
         otherVswCidrBlocks.add("172.16.1.0/24");
         String s = NetworkUtils.autoGenerateSubnet("172.16.0.0/12", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
+        Assert.assertNotEquals("172.16.1.0/24", s);
         //一个子网测试
         otherVswCidrBlocks = new ArrayList<>();
         otherVswCidrBlocks.add("192.168.0.0/26");
         s = NetworkUtils.autoGenerateSubnet("192.168.0.0/24", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
         //父网测试
         otherVswCidrBlocks = new ArrayList<>();
         otherVswCidrBlocks.add("192.0.0.0/4");
         s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
         //不相关网络测试
         otherVswCidrBlocks = new ArrayList<>();
         otherVswCidrBlocks.add("172.16.0.128/16");
         s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
         //空网络测试
         otherVswCidrBlocks = new ArrayList<>();
         s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
         //混合测试
         //不相关网络测试
         otherVswCidrBlocks = new ArrayList<>();
@@ -50,22 +52,20 @@ public class NetworkUtilsTest {
         otherVswCidrBlocks.add("172.16.1.0/23");
         otherVswCidrBlocks.add("192.168.0.0/26");
         s = NetworkUtils.autoGenerateSubnet("172.16.0.0/12", otherVswCidrBlocks);
-        System.out.println(s);
+        Assert.assertNotNull(s);
 
     }
 
 
-
-
     @Test
-    public void testContains(){
-        String ip1="192.168.0.64/26";
-        String ip2="192.168.0.0/26";
-        String ip3="192.168.0.0/24";
-        System.out.println(NetworkUtils.contains(ip2,ip1));
-        System.out.println(NetworkUtils.contains(ip3,ip1));
-        String ip4="172.16.0.129/32";
-        String ip5="172.16.0.0/12";
-        System.out.println(NetworkUtils.contains(ip5,ip4));
+    public void testContains() {
+        String ip1 = "192.168.0.64/26";
+        String ip2 = "192.168.0.0/26";
+        String ip3 = "192.168.0.0/24";
+        Assert.assertFalse(NetworkUtils.contains(ip2, ip1));
+        Assert.assertTrue(NetworkUtils.contains(ip3, ip1));
+        String ip4 = "172.16.0.129/32";
+        String ip5 = "172.16.0.0/12";
+        Assert.assertTrue(NetworkUtils.contains(ip5, ip4));
     }
 }
