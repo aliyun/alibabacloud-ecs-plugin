@@ -7,8 +7,6 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 /**
  * Created by kunlun.ykl on 2020/11/20.
  */
@@ -18,31 +16,36 @@ public class NetworkUtilsTest {
     public void autoGenerateSubnetTest() {
         List<String> otherVswCidrBlocks = Lists.newArrayList();
         //多个子网测试
-        otherVswCidrBlocks.add("172.16.0.0/24");
-//        otherVswCidrBlocks.add("172.16.1.0/23");
+        otherVswCidrBlocks.add("172.16.0.0/17");
         otherVswCidrBlocks.add("172.16.1.0/24");
+        otherVswCidrBlocks.add("172.16.2.0/23");
         String s = NetworkUtils.autoGenerateSubnet("172.16.0.0/12", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
-        Assert.assertNotEquals("172.16.1.0/24", s);
+        Assert.assertTrue(NetworkUtils.contains("172.16.0.0/12", s));
+        Assert.assertFalse(NetworkUtils.parentOrSubNetwork("172.16.0.0/24", s));
+        Assert.assertFalse(NetworkUtils.parentOrSubNetwork("172.16.2.0/23", s));
         //一个子网测试
         otherVswCidrBlocks = new ArrayList<>();
         otherVswCidrBlocks.add("192.168.0.0/26");
         s = NetworkUtils.autoGenerateSubnet("192.168.0.0/24", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
+        Assert.assertTrue(NetworkUtils.contains("192.168.0.0/24", s));
+        Assert.assertFalse(NetworkUtils.parentOrSubNetwork(s,"192.168.0.0/26"));
         //父网测试
         otherVswCidrBlocks = new ArrayList<>();
-        otherVswCidrBlocks.add("192.0.0.0/4");
-        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
+        otherVswCidrBlocks.add("192.0.0.0/8");
+        otherVswCidrBlocks.add("192.168.0.0/26");
+        otherVswCidrBlocks.add("192.168.0.64/26");
+        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/24", otherVswCidrBlocks);
+        Assert.assertTrue(NetworkUtils.contains("192.168.0.0/24", s));
         //不相关网络测试
         otherVswCidrBlocks = new ArrayList<>();
         otherVswCidrBlocks.add("172.16.0.128/16");
-        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
+        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/24", otherVswCidrBlocks);
+        Assert.assertTrue(NetworkUtils.contains("192.168.0.0/24", s));
+        Assert.assertFalse(NetworkUtils.contains("172.16.0.128/16", s));
         //空网络测试
         otherVswCidrBlocks = new ArrayList<>();
-        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/12", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
+        s = NetworkUtils.autoGenerateSubnet("192.168.0.0/24", otherVswCidrBlocks);
+        Assert.assertTrue(NetworkUtils.contains("192.168.0.0/24", s));
         //混合测试
         //不相关网络测试
         otherVswCidrBlocks = new ArrayList<>();
@@ -52,20 +55,8 @@ public class NetworkUtilsTest {
         otherVswCidrBlocks.add("172.16.1.0/23");
         otherVswCidrBlocks.add("192.168.0.0/26");
         s = NetworkUtils.autoGenerateSubnet("172.16.0.0/12", otherVswCidrBlocks);
-        Assert.assertNotNull(s);
-
-    }
-
-
-    @Test
-    public void testContains() {
-        String ip1 = "192.168.0.64/26";
-        String ip2 = "192.168.0.0/26";
-        String ip3 = "192.168.0.0/24";
-        Assert.assertFalse(NetworkUtils.contains(ip2, ip1));
-        Assert.assertTrue(NetworkUtils.contains(ip3, ip1));
-        String ip4 = "172.16.0.129/32";
-        String ip5 = "172.16.0.0/12";
-        Assert.assertTrue(NetworkUtils.contains(ip5, ip4));
+        Assert.assertTrue(NetworkUtils.contains("172.16.0.0/12", s));
+        Assert.assertFalse(NetworkUtils.contains("172.16.0.128/16", s));
+        Assert.assertFalse(NetworkUtils.contains("172.16.1.0/23", s));
     }
 }

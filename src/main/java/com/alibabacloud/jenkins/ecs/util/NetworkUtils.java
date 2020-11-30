@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.*;
 
@@ -16,13 +17,15 @@ import java.util.*;
 public class NetworkUtils {
 
     /**
+     * 生成子网，排除已划分的子网
+     *
      * @param vpcCidrBlock       172.16.0.0/12
      * @param otherVswCidrBlocks 172.16.0.0/24,172.16.1.0/24
      * @return 172.16.2.0/24, 172.16.255.0/24
      */
 
     public static String autoGenerateSubnet(String vpcCidrBlock, List<String> otherVswCidrBlocks) {
-
+        log.info("-------------------vpcCidrBlock:{},otherVswCidrBlocks:{}", vpcCidrBlock, otherVswCidrBlocks);
         List<String> cidrBlocks = Lists.newArrayList(Splitter.on("/").split(vpcCidrBlock));
         int vpcCidrBlockTail = Integer.parseInt(cidrBlocks.get(1));
         String head = cidrBlocks.get(0);
@@ -37,42 +40,64 @@ public class NetworkUtils {
         String newIp = head + "/" + vpcCidrBlockTail;
         String result = "";
         Set<IPAddress> subnets = Sets.newTreeSet();
-        log.info("-------------------newIp:{}", newIp);
+
+        List<String> parentNetworkList = Lists.newArrayList();
+        //   移除本网段的父类网段
+        for (String otherCidrBlock : otherVswCidrBlocks) {
+            if (contains(otherCidrBlock, newIp)) {
+                parentNetworkList.add(otherCidrBlock);
+            }
+        }
+        if (!parentNetworkList.isEmpty()) {
+            otherVswCidrBlocks.removeAll(parentNetworkList);
+        }
 
         //排除非子网内容
         List<String> subNetworkList = Lists.newArrayList();
-        for (String otherCidrBlocks : otherVswCidrBlocks) {
-            if (contains(vpcCidrBlock, otherCidrBlocks)) {
-                subNetworkList.add(otherCidrBlocks);
+        for (String otherCidrBlock : otherVswCidrBlocks) {
+            if (contains(newIp, otherCidrBlock)) {
+                subNetworkList.add(otherCidrBlock);
             }
         }
         for (String subNetwork : subNetworkList) {
-            ArrayList<IPAddress> addresses = exclude(newIp, subNetwork);
+            List<IPAddress> addresses = exclude(newIp, subNetwork);
             subnets.addAll(addresses);
         }
         if (subnets.isEmpty()) {
             subnets.addAll(adjustBlock(newIp, 1));
         }
+
         //排除原来子网一样的网段
         List<IPAddress> existIps = Lists.newArrayList();
         for (IPAddress address : subnets) {
-            for(String subnet : otherVswCidrBlocks){
-                if(address.toString().equals(subnet)){
+            for (String subnet : otherVswCidrBlocks) {
+                if (parentOrSubNetwork(address.toString(), subnet)) {
                     existIps.add(address);
                 }
             }
         }
         //移除存在的子网
         subnets.removeAll(existIps);
-        for(IPAddress addr : subnets){
+        for (IPAddress addr : subnets) {
             result = addr.toString();
             break;
         }
 
+        if (StringUtils.isEmpty(result)) {
+            log.error("autoGenerateSubnet error. Subnet segment exhausted. subnets :{}", existIps);
+            return vpcCidrBlock;
+        }
         return result;
     }
 
-    static TreeSet<IPAddress> adjustBlock(String original, int bitShift) {
+    /**
+     * 按照子网掩码位移位数，生成子网
+     *
+     * @param original
+     * @param bitShift
+     * @return
+     */
+    public static Set<IPAddress> adjustBlock(String original, int bitShift) {
         IPAddress subnet = new IPAddressString(original).getAddress();
         IPAddress newSubnets = subnet.setPrefixLength(subnet.getPrefixLength() +
                 bitShift, false);
@@ -83,11 +108,17 @@ public class NetworkUtils {
         return subnetSet;
     }
 
-
-    static ArrayList<IPAddress> exclude(String addrStr, String sub) {
+    /**
+     * 划分子网，排除已划分的子网
+     *
+     * @param addrStr
+     * @param sub
+     * @return
+     */
+    public static List<IPAddress> exclude(String addrStr, String sub) {
         IPAddress one = new IPAddressString(addrStr).getAddress();
         IPAddress two = new IPAddressString(sub).getAddress();
-        IPAddress result[] = one.subtract(two);
+        List<IPAddress> result = Arrays.asList(one.subtract(two));
         ArrayList<IPAddress> blockList = new ArrayList<>();
         for (IPAddress addr : result) {
             blockList.addAll(Arrays.asList(addr.spanWithPrefixBlocks()));
@@ -95,11 +126,31 @@ public class NetworkUtils {
         return blockList;
     }
 
-    public static Boolean contains(String network, String address) {
-        IPAddressString one = new IPAddressString(network);
-        IPAddressString two = new IPAddressString(address);
+    /**
+     * 判断子网的包含关系，包含返回true，否则返回false
+     *
+     * @param parentNetwork
+     * @param childNetwork
+     * @return
+     */
+    public static Boolean contains(String parentNetwork, String childNetwork) {
+        IPAddressString one = new IPAddressString(parentNetwork);
+        IPAddressString two = new IPAddressString(childNetwork);
+
         return one.contains(two);
     }
+
+    /**
+     * 判断两个网是否是父子网关系
+     *
+     * @param net1
+     * @param net2
+     * @return
+     */
+    public static Boolean parentOrSubNetwork(String net1, String net2) {
+        return contains(net1, net2) || contains(net2, net1);
+    }
+
 }
 
 
