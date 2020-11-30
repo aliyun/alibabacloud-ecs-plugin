@@ -16,9 +16,9 @@ public class NetworkUtilsTest {
     public void autoGenerateSubnetTest() {
         List<String> otherVswCidrBlocks = Lists.newArrayList();
         //多个子网测试
-        otherVswCidrBlocks.add("172.16.0.0/17");
-        otherVswCidrBlocks.add("172.16.1.0/24");
-        otherVswCidrBlocks.add("172.16.2.0/23");
+        otherVswCidrBlocks.add("172.16.0.0/16");
+//        otherVswCidrBlocks.add("172.16.1.0/24");
+//        otherVswCidrBlocks.add("172.16.2.0/23");
         String s = NetworkUtils.autoGenerateSubnet("172.16.0.0/12", otherVswCidrBlocks);
         Assert.assertTrue(NetworkUtils.contains("172.16.0.0/12", s));
         Assert.assertFalse(NetworkUtils.parentOrSubNetwork("172.16.0.0/24", s));

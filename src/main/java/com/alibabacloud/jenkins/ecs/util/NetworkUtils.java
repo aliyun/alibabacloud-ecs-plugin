@@ -34,59 +34,66 @@ public class NetworkUtils {
             log.error("autoGenerateSubnet error. illegal cidrBlock: {} vpcCidrBlockTail: {}", vpcCidrBlock, vpcCidrBlockTail);
             return vpcCidrBlock;
         }
-        if (vpcCidrBlockTail <= 16) {
-            vpcCidrBlockTail = 16;
+
+        if (vpcCidrBlockTail < 16) {
+            vpcCidrBlockTail = 15;
         }
+
         String newIp = head + "/" + vpcCidrBlockTail;
+
         String result = "";
         Set<IPAddress> subnets = Sets.newTreeSet();
 
-        List<String> parentNetworkList = Lists.newArrayList();
-        //   移除本网段的父类网段
-        for (String otherCidrBlock : otherVswCidrBlocks) {
-            if (contains(otherCidrBlock, newIp)) {
-                parentNetworkList.add(otherCidrBlock);
-            }
-        }
-        if (!parentNetworkList.isEmpty()) {
-            otherVswCidrBlocks.removeAll(parentNetworkList);
-        }
-
-        //排除非子网内容
-        List<String> subNetworkList = Lists.newArrayList();
-        for (String otherCidrBlock : otherVswCidrBlocks) {
-            if (contains(newIp, otherCidrBlock)) {
-                subNetworkList.add(otherCidrBlock);
-            }
-        }
-        for (String subNetwork : subNetworkList) {
-            List<IPAddress> addresses = exclude(newIp, subNetwork);
-            subnets.addAll(addresses);
-        }
-        if (subnets.isEmpty()) {
-            subnets.addAll(adjustBlock(newIp, 1));
-        }
-
-        //排除原来子网一样的网段
-        List<IPAddress> existIps = Lists.newArrayList();
-        for (IPAddress address : subnets) {
-            for (String subnet : otherVswCidrBlocks) {
-                if (parentOrSubNetwork(address.toString(), subnet)) {
-                    existIps.add(address);
+        if (otherVswCidrBlocks.isEmpty()) {
+            Integer bitshift = 1;
+            subnets.addAll(adjustBlock(newIp, bitshift));
+        } else {
+            List<String> parentNetworkList = Lists.newArrayList();
+            //   移除本网段的父类网段
+            for (String otherCidrBlock : otherVswCidrBlocks) {
+                if (contains(otherCidrBlock, newIp)) {
+                    parentNetworkList.add(otherCidrBlock);
                 }
             }
+            if (!parentNetworkList.isEmpty()) {
+                otherVswCidrBlocks.removeAll(parentNetworkList);
+            }
+            //排除非子网内容
+            List<String> subNetworkList = Lists.newArrayList();
+            for (String otherCidrBlock : otherVswCidrBlocks) {
+                if (contains(newIp, otherCidrBlock)) {
+                    subNetworkList.add(otherCidrBlock);
+                }
+            }
+            for (String subNetwork : subNetworkList) {
+                List<IPAddress> addresses = exclude(newIp, subNetwork);
+                subnets.addAll(addresses);
+            }
+            //排除原来子网一样的网段
+            List<IPAddress> existIps = Lists.newArrayList();
+            for (IPAddress address : subnets) {
+                for (String subnet : otherVswCidrBlocks) {
+                    if (parentOrSubNetwork(address.toString(), subnet)) {
+                        existIps.add(address);
+                    }
+                }
+            }
+            //移除存在的子网
+            subnets.removeAll(existIps);
         }
-        //移除存在的子网
-        subnets.removeAll(existIps);
+
         for (IPAddress addr : subnets) {
-            result = addr.toString();
-            break;
+            if (Integer.parseInt(Lists.newArrayList(Splitter.on("/").split(addr.toString())).get(1)) >= 16) {
+                result = addr.toString();
+                break;
+            }
         }
 
         if (StringUtils.isEmpty(result)) {
-            log.error("autoGenerateSubnet error. Subnet segment exhausted. subnets :{}", existIps);
+            log.error("autoGenerateSubnet error. Subnet segment exhausted. otherVswCidrBlocks :{}", otherVswCidrBlocks);
             return vpcCidrBlock;
         }
+        log.info("autoGenerateSubnet result : {}",result);
         return result;
     }
 
