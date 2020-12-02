@@ -138,17 +138,17 @@ public class AlibabaEcsClient {
         return null;
     }
 
-    public String deleteVpc(String vpcId) {
+    public boolean deleteVpc(String vpcId) {
         try {
             DeleteVpcRequest request = new DeleteVpcRequest();
             request.setVpcId(vpcId);
             DeleteVpcResponse acsResponse = client.getAcsResponse(request);
             log.info("delete vpc success. vpcId: {}", vpcId);
-            return vpcId;
+            return true;
         } catch (Exception e) {
             log.error("delete vpc error. vpcId: {}", vpcId, e);
         }
-        return null;
+        return false;
     }
 
     public List<SecurityGroup> describeSecurityGroups(String vpc) {
@@ -284,17 +284,17 @@ public class AlibabaEcsClient {
         return null;
     }
 
-    public String deleteVsw(String vSwitchId) {
+    public boolean deleteVsw(String vSwitchId) {
         try {
             DeleteVSwitchRequest deleteVSwitchRequest = new DeleteVSwitchRequest();
             deleteVSwitchRequest.setVSwitchId(vSwitchId);
             DeleteVSwitchResponse acsResponse = client.getAcsResponse(deleteVSwitchRequest);
             log.info("deleteVSW success. vswId: {}", vSwitchId);
-            return vSwitchId;
+            return true;
         } catch (Exception e) {
-            log.error("deleteVsw error.", e);
+            log.error("deleteVsw error. vswId: {}", vSwitchId, e);
         }
-        return null;
+        return false;
     }
 
     public List<String> describeInstanceTypes(String zone, int core, float memInGb) {
