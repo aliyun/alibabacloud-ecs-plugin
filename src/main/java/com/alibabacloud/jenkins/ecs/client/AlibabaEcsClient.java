@@ -142,7 +142,7 @@ public class AlibabaEcsClient {
         try {
             DeleteVpcRequest request = new DeleteVpcRequest();
             request.setVpcId(vpcId);
-            DeleteVpcResponse acsResponse = client.getAcsResponse(request);
+            client.getAcsResponse(request);
             log.info("delete vpc success. vpcId: {}", vpcId);
             return true;
         } catch (Exception e) {
@@ -288,7 +288,7 @@ public class AlibabaEcsClient {
         try {
             DeleteVSwitchRequest deleteVSwitchRequest = new DeleteVSwitchRequest();
             deleteVSwitchRequest.setVSwitchId(vSwitchId);
-            DeleteVSwitchResponse acsResponse = client.getAcsResponse(deleteVSwitchRequest);
+            client.getAcsResponse(deleteVSwitchRequest);
             log.info("deleteVSW success. vswId: {}", vSwitchId);
             return true;
         } catch (Exception e) {
