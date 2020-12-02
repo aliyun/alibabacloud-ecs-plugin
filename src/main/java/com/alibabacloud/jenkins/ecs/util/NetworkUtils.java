@@ -1,14 +1,17 @@
 package com.alibabacloud.jenkins.ecs.util;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.List;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import java.util.TreeSet;
+import java.util.HashSet;
+import java.util.Arrays;
 
 /**
  * Created by kunlun.ykl on 2020/11/20.
@@ -17,140 +20,128 @@ import java.util.*;
 public class NetworkUtils {
 
     /**
-     * 生成子网，排除已划分的子网
+     * generate a VSW cidr block which doesn't overlap with any existing VSWs' cidr blocks
      *
-     * @param vpcCidrBlock       172.16.0.0/12
-     * @param otherVswCidrBlocks 172.16.0.0/24,172.16.1.0/24
-     * @return 172.16.2.0/24, 172.16.255.0/24
+     * @param vpcCidrBlock vpc address in which we generate the VSW cidr block
+     * @param otherVswCidrBlocks existing VSWs' cidr blocks list
+     * @return available VSW cidr block address
      */
+    private final static int DEFAULT_SUBNET_MASK_SHIFT = 1;
+    private final static int DEFAULT_SUBNET_MASK_LENGTH = 17;
 
     public static String autoGenerateSubnet(String vpcCidrBlock, List<String> otherVswCidrBlocks) {
-        log.info("-------------------vpcCidrBlock:{},otherVswCidrBlocks:{}", vpcCidrBlock, otherVswCidrBlocks);
-        List<String> cidrBlocks = Lists.newArrayList(Splitter.on("/").split(vpcCidrBlock));
-        int vpcCidrBlockTail = Integer.parseInt(cidrBlocks.get(1));
-        String head = cidrBlocks.get(0);
-
-        if (vpcCidrBlockTail >= 32) {
-            log.error("autoGenerateSubnet error. illegal cidrBlock: {} vpcCidrBlockTail: {}", vpcCidrBlock, vpcCidrBlockTail);
-            return vpcCidrBlock;
-        }
-        if (vpcCidrBlockTail <= 16) {
-            vpcCidrBlockTail = 16;
-        }
-        String newIp = head + "/" + vpcCidrBlockTail;
-        String result = "";
-        Set<IPAddress> subnets = Sets.newTreeSet();
-
-        List<String> parentNetworkList = Lists.newArrayList();
-        //   移除本网段的父类网段
-        for (String otherCidrBlock : otherVswCidrBlocks) {
-            if (contains(otherCidrBlock, newIp)) {
-                parentNetworkList.add(otherCidrBlock);
+        log.info("-------------------vpcCidrBlock : {}, otherVswCidrBlocks : {}", vpcCidrBlock, otherVswCidrBlocks);
+        IPAddress result = null;
+        IPAddress vpcIpAddress = new IPAddressString(vpcCidrBlock).getAddress();
+        // When there is no existing VSWs, generate a default VSW whose network prefix length is bigger than the VPC's network prefix length and  fits the Aliyun VSW requirement
+        // In Aliyun, users can use 192.168.0.0/16、172.16.0.0/12、10.0.0.0/8 and theirs subnets to construct a VPC; subnet mask ranges from 16 to 24 (including 16 and 24)
+        // For VSW, the maximum network prefix length is 29 and the minimum is 16 (VSW network prefix length should be no less than VPC network prefix length)
+        if (otherVswCidrBlocks.size() == 0) {
+            int vpcPrefixLength = vpcIpAddress.getNetworkPrefixLength();
+            IPAddress availableSubNetRange;
+            if (vpcPrefixLength >= 16) {
+                availableSubNetRange = vpcIpAddress.setPrefixLength(vpcIpAddress.getPrefixLength() + DEFAULT_SUBNET_MASK_SHIFT, false);
+            } else {
+                availableSubNetRange = vpcIpAddress.setPrefixLength(DEFAULT_SUBNET_MASK_LENGTH);
             }
+            Iterator<? extends IPAddress> iterator = availableSubNetRange.prefixBlockIterator();
+            String availableSubnetAddress = iterator.next().toString();
+            log.info("-------------------vpcCidrBlock : {}, otherVswCidrBlocks : {}, output available subnet : {}", vpcCidrBlock, otherVswCidrBlocks, availableSubnetAddress);
+            return availableSubnetAddress;
         }
-        if (!parentNetworkList.isEmpty()) {
-            otherVswCidrBlocks.removeAll(parentNetworkList);
-        }
-
-        //排除非子网内容
-        List<String> subNetworkList = Lists.newArrayList();
-        for (String otherCidrBlock : otherVswCidrBlocks) {
-            if (contains(newIp, otherCidrBlock)) {
-                subNetworkList.add(otherCidrBlock);
+        List<IPAddress> vswIpAddresses = otherVswCidrBlocks.stream().
+                map(s -> new IPAddressString(s).getAddress()).
+                sorted(Comparator.comparing(IPAddress::getNetworkPrefixLength)).
+                collect(Collectors.toList());
+        Set<IPAddress> resultSet = new TreeSet<>();
+        resultSet.add(vpcIpAddress);
+        int numOfVSWs = vswIpAddresses.size();
+        for (int i = 0; i < numOfVSWs; i++) {
+            IPAddress vswIpAddress = vswIpAddresses.get(i);
+            TreeSet<IPAddress> filteredSet = new TreeSet<>();
+            for (IPAddress candidateSubNet : resultSet) {
+                filteredSet.addAll(subtractSubnet(candidateSubNet, vswIpAddress));
             }
+            // All possible subnets are occupied
+            if (filteredSet.size() == 0) {
+                break;
+            }
+            // Judge if there is one available subnet address already
+            IPAddress availableSubnet;
+            if (i <= numOfVSWs - 2) {
+                availableSubnet = getAvailableSubnet(filteredSet, vswIpAddresses.subList(i + 1, numOfVSWs));
+            } else {
+                availableSubnet = filteredSet.first();
+            }
+            // Subnet founded, exit
+            if (availableSubnet != null) {
+                result = availableSubnet;
+                break;
+            }
+            resultSet = filteredSet;
         }
-        for (String subNetwork : subNetworkList) {
-            List<IPAddress> addresses = exclude(newIp, subNetwork);
-            subnets.addAll(addresses);
+        if (result == null) {
+            log.warn("No available subnet. vpcCidrBlock : {}, otherVswCidrBlocks : {}", vpcCidrBlock, otherVswCidrBlocks);
+            return "";
         }
-        if (subnets.isEmpty()) {
-            subnets.addAll(adjustBlock(newIp, 1));
-        }
+        String availableSubnetAddress = result.toString();
+        log.info("-------------------vpcCidrBlock : {}, otherVswCidrBlocks : {}, output available subnet : {}", vpcCidrBlock, otherVswCidrBlocks, availableSubnetAddress);
+        return availableSubnetAddress;
+    }
 
-        //排除原来子网一样的网段
-        List<IPAddress> existIps = Lists.newArrayList();
-        for (IPAddress address : subnets) {
-            for (String subnet : otherVswCidrBlocks) {
-                if (parentOrSubNetwork(address.toString(), subnet)) {
-                    existIps.add(address);
+    /**
+     * try to find out one available subnet in the candidateSet which doesn't contain any addresses in existingIpAddresses
+     *
+     * @param candidateSet        candidate subnets
+     * @param existingIpAddresses ip addresses which need to be exclusive
+     * @return any available subnet or null if there is no available subnet
+     */
+    private static IPAddress getAvailableSubnet(Set<IPAddress> candidateSet, List<IPAddress> existingIpAddresses) {
+        for (IPAddress candidateSubNet : candidateSet) {
+            boolean found = true;
+            for (int i = 0; i < existingIpAddresses.size(); i++) {
+                if (candidateSubNet.contains(existingIpAddresses.get(i))) {
+                    found = false;
+                    break;
                 }
             }
+            if (found) {
+                return candidateSubNet;
+            }
         }
-        //移除存在的子网
-        subnets.removeAll(existIps);
-        for (IPAddress addr : subnets) {
-            result = addr.toString();
-            break;
-        }
-
-        if (StringUtils.isEmpty(result)) {
-            log.error("autoGenerateSubnet error. Subnet segment exhausted. subnets :{}", existIps);
-            return vpcCidrBlock;
-        }
-        return result;
+        return null;
     }
 
     /**
-     * 按照子网掩码位移位数，生成子网
+     * remove vswIpAddress from the candidateSubNet and get the result set which contains the remaining subnets
      *
-     * @param original
-     * @param bitShift
-     * @return
+     * @param candidateSubNet original subnet
+     * @param vswIpAddress    ip address which need to be excluded from the original subnet
+     * @return available subnets
      */
-    public static Set<IPAddress> adjustBlock(String original, int bitShift) {
-        IPAddress subnet = new IPAddressString(original).getAddress();
-        IPAddress newSubnets = subnet.setPrefixLength(subnet.getPrefixLength() +
-                bitShift, false);
-        TreeSet<IPAddress> subnetSet = new TreeSet<>();
-        Iterator<? extends IPAddress> iterator = newSubnets.prefixBlockIterator();
-        iterator.forEachRemaining(subnetSet::add);
-
-        return subnetSet;
-    }
-
-    /**
-     * 划分子网，排除已划分的子网
-     *
-     * @param addrStr
-     * @param sub
-     * @return
-     */
-    public static List<IPAddress> exclude(String addrStr, String sub) {
-        IPAddress one = new IPAddressString(addrStr).getAddress();
-        IPAddress two = new IPAddressString(sub).getAddress();
-        List<IPAddress> result = Arrays.asList(one.subtract(two));
-        ArrayList<IPAddress> blockList = new ArrayList<>();
-        for (IPAddress addr : result) {
-            blockList.addAll(Arrays.asList(addr.spanWithPrefixBlocks()));
+    private static Set<IPAddress> subtractSubnet(IPAddress candidateSubNet, IPAddress vswIpAddress) {
+        Set<IPAddress> resultSet = new HashSet<>();
+        IPAddress[] addresses = candidateSubNet.subtract(vswIpAddress);
+        if (addresses != null) {
+            for (IPAddress ipAddress : addresses) {
+                resultSet.addAll(Arrays.asList(ipAddress.spanWithPrefixBlocks()));
+            }
         }
-        return blockList;
+        return resultSet;
     }
 
     /**
-     * 判断子网的包含关系，包含返回true，否则返回false
+     * judge if the first network contains the second network; return true if there is inclusion relation, otherwise false
      *
      * @param parentNetwork
      * @param childNetwork
      * @return
      */
     public static Boolean contains(String parentNetwork, String childNetwork) {
-        IPAddressString one = new IPAddressString(parentNetwork);
-        IPAddressString two = new IPAddressString(childNetwork);
-
+        IPAddress one = new IPAddressString(parentNetwork).getAddress();
+        IPAddress two = new IPAddressString(childNetwork).getAddress();
         return one.contains(two);
     }
-
-    /**
-     * 判断两个网是否是父子网关系
-     *
-     * @param net1
-     * @param net2
-     * @return
-     */
-    public static Boolean parentOrSubNetwork(String net1, String net2) {
-        return contains(net1, net2) || contains(net2, net1);
-    }
-
 }
 
 
