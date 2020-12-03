@@ -1,4 +1,12 @@
 # Alibabacloud ECS plugin
+# Table of contents
+   * [Introduction](#introduction)
+   * [Usage](#usage)
+      * [Create a key pair](#Create-a-key-pair-of-ECS)
+      * [Download plugin](#Download-Alibaba-Cloud-ECS-plugin)
+      * [Configure clouds](#Configure-clouds)
+   * [Some known problems in use](#Some-known-problems-in-use)
+   * [Contact us](#Contact-us)
 
 # Introduction
 This plugin extends Jenkins slave node generation (node provision), in the case of high concurrent 
@@ -12,7 +20,8 @@ Please refer to https://github.com/aliyun/alibabacloud-credentials-jenkins-plugi
 Before using this product, it is assumed that you have registered your alibaba cloud 
 account and obtained the relevant AK and sk.
 
-### Create a key pair of ECS with address: https://ecs.console.aliyun.com/
+### Create a key pair of ECS 
+* Create a key pair of ECS with address: https://ecs.console.aliyun.com/
 * Select "network and security" \ > "key pair"
 ![](docs/images/alibabacloud.keypair.png)
 * Click the upper right corner to create a key pair, generate the key according to the prompt, 
@@ -23,7 +32,7 @@ https://help.aliyun.com/document_detail/51792.html?spm=5176.ecsbuyv3.system.2.82
 
 
 
-### Download "Alibaba Cloud ECS plugin"
+### Download Alibaba Cloud ECS plugin
 * Enter the installed Jenkins client and go to the "manage Jenkins" / > "manage plugins" / > "available" page
 ![](docs/images/jenkins.avail.png)
 * Enter "Alibaba Cloud ECS" plugin in the search box to download and install
@@ -77,10 +86,7 @@ Therefore, please ensure that the connection is successful before saving.
 ![](docs/images/jenkins.cloud.primaryKey.png)
 ![](docs/images/jenkins.provision.png)
 ![](docs/images/jenkins.error.png)
-
-
-
-
-
-
+#Contact us
+* If you have any questions or requirements, please scan the following QR code with nails：
+![](docs/images/nail_group_qr_code.png)
 
