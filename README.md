@@ -77,7 +77,11 @@ Therefore, please ensure that the connection is successful before saving.
 ![](docs/images/jenkins.cloud.primaryKey.png)
 ![](docs/images/jenkins.provision.png)
 ![](docs/images/jenkins.error.png)
+#Contact us
+* DingTalk Group Number：44723358
+* DingTalk Group QR code
 
+  ![](docs/images/qrcode.png)
 
 
 
