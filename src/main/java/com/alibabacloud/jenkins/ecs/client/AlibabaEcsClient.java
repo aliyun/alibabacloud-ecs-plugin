@@ -1,62 +1,25 @@
 package com.alibabacloud.jenkins.ecs.client;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
-
-
 
 import com.alibaba.fastjson.JSON;
 
 import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
 import com.aliyuncs.auth.AlibabaCloudCredentials;
-import com.aliyuncs.ecs.model.v20140526.AllocatePublicIpAddressRequest;
-import com.aliyuncs.ecs.model.v20140526.AllocatePublicIpAddressResponse;
-import com.aliyuncs.ecs.model.v20140526.AuthorizeSecurityGroupRequest;
-import com.aliyuncs.ecs.model.v20140526.CreateSecurityGroupRequest;
-import com.aliyuncs.ecs.model.v20140526.CreateSecurityGroupResponse;
-import com.aliyuncs.ecs.model.v20140526.CreateVSwitchRequest;
-import com.aliyuncs.ecs.model.v20140526.CreateVSwitchResponse;
-import com.aliyuncs.ecs.model.v20140526.CreateVpcRequest;
-import com.aliyuncs.ecs.model.v20140526.CreateVpcResponse;
-import com.aliyuncs.ecs.model.v20140526.DeleteInstanceRequest;
-import com.aliyuncs.ecs.model.v20140526.DeleteInstanceResponse;
-import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse;
+import com.aliyuncs.ecs.model.v20140526.*;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone.AvailableResource;
 import com.aliyuncs.ecs.model.v20140526.DescribeAvailableResourceResponse.AvailableZone.AvailableResource.SupportedResource;
-import com.aliyuncs.ecs.model.v20140526.DescribeImagesRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeImagesResponse;
-import com.aliyuncs.ecs.model.v20140526.DescribeInstancesRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeInstancesResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeInstancesResponse.Instance;
-import com.aliyuncs.ecs.model.v20140526.DescribeKeyPairsRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeKeyPairsResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeKeyPairsResponse.KeyPair;
-import com.aliyuncs.ecs.model.v20140526.DescribeRegionsRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeRegionsResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeRegionsResponse.Region;
-import com.aliyuncs.ecs.model.v20140526.DescribeSecurityGroupsRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeSecurityGroupsResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeSecurityGroupsResponse.SecurityGroup;
-import com.aliyuncs.ecs.model.v20140526.DescribeVSwitchesRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeVSwitchesResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeVSwitchesResponse.VSwitch;
-import com.aliyuncs.ecs.model.v20140526.DescribeVpcsRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeVpcsResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeVpcsResponse.Vpc;
-import com.aliyuncs.ecs.model.v20140526.DescribeZonesRequest;
-import com.aliyuncs.ecs.model.v20140526.DescribeZonesResponse;
 import com.aliyuncs.ecs.model.v20140526.DescribeZonesResponse.Zone;
-import com.aliyuncs.ecs.model.v20140526.RunInstancesRequest;
-import com.aliyuncs.ecs.model.v20140526.RunInstancesResponse;
-import com.aliyuncs.ecs.model.v20140526.StopInstanceRequest;
-import com.aliyuncs.ecs.model.v20140526.StopInstanceResponse;
-import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
@@ -115,12 +78,11 @@ public class AlibabaEcsClient {
     }
 
     public List<Vpc> describeVpcs() {
-
         DescribeVpcsRequest request = new DescribeVpcsRequest();
         request.setPageNumber(INIT_PAGE_NUMBER);
         request.setPageSize(MAX_PAGE_SIZE);
         request.setSysRegionId(regionNo);
-        List<Vpc> vpcList = new ArrayList<>();
+        List<Vpc> vpcList = Lists.newArrayList();
         DescribeVpcsResponse acsResponse = new DescribeVpcsResponse();
         acsResponse.setVpcs(vpcList);
         do {
@@ -131,7 +93,7 @@ public class AlibabaEcsClient {
                 }
                 vpcList.addAll(acsResponse.getVpcs());
             } catch (Exception e) {
-                log.error("describeVpcs error.regionId is : {}", regionNo, e);
+                log.error("describeVpcs error.regionId: {}", regionNo, e);
             }
             request.setPageNumber(request.getPageNumber() + 1);
         } while (acsResponse.getVpcs().size() == MAX_PAGE_SIZE);
@@ -174,6 +136,19 @@ public class AlibabaEcsClient {
             log.error("createVpc error.", e);
         }
         return null;
+    }
+
+    public boolean deleteVpc(String vpcId) {
+        try {
+            DeleteVpcRequest request = new DeleteVpcRequest();
+            request.setVpcId(vpcId);
+            client.getAcsResponse(request);
+            log.info("delete vpc success. vpcId: {}", vpcId);
+            return true;
+        } catch (Exception e) {
+            log.error("delete vpc error. vpcId: {}", vpcId, e);
+        }
+        return false;
     }
 
     public List<SecurityGroup> describeSecurityGroups(String vpc) {
@@ -277,7 +252,9 @@ public class AlibabaEcsClient {
         try {
             DescribeVSwitchesRequest describeZonesRequest = new DescribeVSwitchesRequest();
             describeZonesRequest.setSysRegionId(regionNo);
-            describeZonesRequest.setZoneId(zone);
+            if (StringUtils.isNotEmpty(zone)) {
+                describeZonesRequest.setZoneId(zone);
+            }
             describeZonesRequest.setVpcId(vpc);
             DescribeVSwitchesResponse acsResponse = client.getAcsResponse(describeZonesRequest);
             if (CollectionUtils.isEmpty(acsResponse.getVSwitches())) {
@@ -302,9 +279,22 @@ public class AlibabaEcsClient {
                     zone, vpc, cidrBlock, acsResponse.getVSwitchId());
             return acsResponse.getVSwitchId();
         } catch (Exception e) {
-            log.error("createVsw error.", e);
+            log.error("createVsw error. zone: {} vpc: {} cidrBlock: {}", zone, vpc, cidrBlock, e);
         }
         return null;
+    }
+
+    public boolean deleteVsw(String vSwitchId) {
+        try {
+            DeleteVSwitchRequest deleteVSwitchRequest = new DeleteVSwitchRequest();
+            deleteVSwitchRequest.setVSwitchId(vSwitchId);
+            client.getAcsResponse(deleteVSwitchRequest);
+            log.info("deleteVSW success. vswId: {}", vSwitchId);
+            return true;
+        } catch (Exception e) {
+            log.error("deleteVsw error. vswId: {}", vSwitchId, e);
+        }
+        return false;
     }
 
     public List<String> describeInstanceTypes(String zone, int core, float memInGb) {
@@ -350,9 +340,6 @@ public class AlibabaEcsClient {
     public List<KeyPair> describeKeyPairs(@Nullable String keyPairName, @Nullable String pfp) {
         try {
             DescribeKeyPairsRequest request = new DescribeKeyPairsRequest();
-          
-         
-          
             request.setSysRegionId(regionNo);
             request.setKeyPairName(keyPairName);
             request.setKeyPairFingerPrint(pfp);
