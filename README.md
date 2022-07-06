@@ -214,11 +214,18 @@ This is also a good place to install additional packages that you need for your 
 will succeed, but "provision node" will report an error of "a problem occurred while processing the request". 
 Therefore, please ensure that the connection is successful before saving.
 
+* Examples are as follows:
+![](docs/images/jenkins.cloud.primaryKey.png)
+![](docs/images/jenkins.provision.png)
+![](docs/images/jenkins.error.png)
+
 # Change Log <a id="changeLog"></a>
 [changelog](https://github.com/jenkinsci/alibabacloud-ecs-plugin/blob/master/CHANGELOG.md)
 
-# Contact us <a id="contactUs"></a>
+#Contact us <a id="contactUs"></a>
 * If you have any questions or requirements, please scan the following QR code with [DingTalk QRCode](https://www.dingtalk.com/en)
+* DingTalk Group Number：44723358
+* DingTalk Group QR code
 
-![](docs/images/nail_group_qr_code.png)
+  ![](docs/images/qrcode.png)
 
