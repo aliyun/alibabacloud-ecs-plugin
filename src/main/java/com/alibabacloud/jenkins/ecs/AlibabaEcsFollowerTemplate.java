@@ -13,6 +13,7 @@ import hudson.model.Descriptor;
 import jenkins.model.Jenkins;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -28,6 +29,26 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
     private String initScript;
     private String labelString;
     private String remoteFs;
+    /**
+     * 系统盘类型
+     * <p>
+     * cloud_efficiency：高效云盘。
+     * cloud_ssd：SSD云盘。
+     * cloud_essd：ESSD云盘。
+     * cloud：普通云盘。
+     * </p>
+     */
+    private String systemDiskCategory;
+
+    /**
+     * 系统盘大小, 以GB为单位, 取值范围：20~500。
+     */
+    private Integer systemDiskSize;
+
+    /**
+     * 是否创建公网IP, 目前用NAT公网IP, 后续可以考虑使用EIP
+     */
+    private Boolean attachPublicIp = Boolean.TRUE;
 
     private int minimumNumberOfInstances;
 
@@ -44,6 +65,26 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
         this.initScript = initScript;
         this.labelString = labelString;
         this.remoteFs = remoteFs;
+    }
+
+    public AlibabaEcsFollowerTemplate(String region, String zone, String instanceType, int minimumNumberOfInstances,
+                                      String vsw, String initScript, String labelString, String remoteFs,
+                                      String systemDiskCategory, Integer systemDiskSize,
+                                      Boolean attachPublicIp) {
+        this.region = region;
+        this.zone = zone;
+        this.instanceType = instanceType;
+        this.templateId = CloudHelper.getTemplateId(zone, instanceType);
+        this.minimumNumberOfInstances = minimumNumberOfInstances;
+        this.vswId = vsw;
+        this.initScript = initScript;
+        this.labelString = labelString;
+        this.remoteFs = remoteFs;
+        this.systemDiskCategory = systemDiskCategory;
+        this.systemDiskSize = systemDiskSize;
+        if (attachPublicIp != null) {
+            this.attachPublicIp = attachPublicIp;
+        }
     }
 
     public AlibabaCloud getParent() {
@@ -99,7 +140,8 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
         List<AlibabaEcsSpotFollower> list = Lists.newArrayList();
         List<String> instanceIds = provisionSpot(amount);
         for (String instanceId : instanceIds) {
-            AlibabaEcsSpotFollower alibabaEcsSpotFollower = new AlibabaEcsSpotFollower(instanceId, templateId + "-" + instanceId,
+            AlibabaEcsSpotFollower alibabaEcsSpotFollower = new AlibabaEcsSpotFollower(instanceId,
+                templateId + "-" + instanceId,
                 remoteFs,
                 parent.getDisplayName(), labelString, initScript, getTemplateId());
             list.add(alibabaEcsSpotFollower);
@@ -109,7 +151,7 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
 
     public List<String> provisionSpot(int amount) throws Exception {
         AlibabaEcsClient connect = getParent().connect();
-        if(null == connect){
+        if (null == connect) {
             log.error("AlibabaEcsClient  connection failure.");
             throw new AlibabaEcsException("AlibabaEcsClient connect failure.");
         }
@@ -117,7 +159,7 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
         request.setVSwitchId(vswId);
         request.setImageId(parent.getImage());
         request.setSecurityGroupId(parent.getSecurityGroup());
-        if(null == parent.getPrivateKey()){
+        if (null == parent.getPrivateKey()) {
             log.error("provision error privateKey is empty.");
             throw new AlibabaEcsException("provision error privateKey is empty.");
         }
@@ -129,7 +171,16 @@ public class AlibabaEcsFollowerTemplate implements Describable<AlibabaEcsFollowe
         request.setAmount(amount);
         request.setKeyPairName(keyPairName);
         request.setInstanceType(instanceType);
-        connect.runInstances(request);
+        if(StringUtils.isNotBlank(systemDiskCategory)) {
+            request.setSystemDiskCategory(systemDiskCategory);
+        }
+        if (null != systemDiskSize) {
+            request.setSystemDiskSize(systemDiskSize.toString());
+        }
+        if (BooleanUtils.isTrue(attachPublicIp)) {
+            request.setInternetMaxBandwidthIn(10);
+            request.setInternetMaxBandwidthOut(10);
+        }
         List<String> instanceIdSets = connect.runInstances(request);
         if (CollectionUtils.isEmpty(instanceIdSets)
             || StringUtils.isBlank(instanceIdSets.get(0))) {

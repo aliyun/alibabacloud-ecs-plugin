@@ -385,10 +385,11 @@ public class AlibabaEcsClient {
     /**
      * @param instanceId
      */
-    public void terminateIntance(String instanceId) {
+    public void terminateInstance(String instanceId, boolean force) {
         try {
             DeleteInstanceRequest request = new DeleteInstanceRequest();
             request.setInstanceId(instanceId);
+            request.setForce(force);
             DeleteInstanceResponse acsResponse = client.getAcsResponse(request);
             log.info("terminateIntance success. instanceId: {} resp: {}", instanceId, JSON.toJSONString(acsResponse));
         } catch (Exception e) {
@@ -407,8 +408,6 @@ public class AlibabaEcsClient {
             request.setAcceptFormat(FormatType.JSON);
             request.setInstanceChargeType("PostPaid");
             request.setSpotStrategy("SpotAsPriceGo");
-            request.setInternetMaxBandwidthIn(10);
-            request.setInternetMaxBandwidthOut(10);
             request.setIoOptimized("optimized");
 
             RunInstancesResponse acsResponse = client.getAcsResponse(request);

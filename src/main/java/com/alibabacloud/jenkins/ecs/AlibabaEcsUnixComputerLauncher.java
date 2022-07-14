@@ -37,15 +37,15 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
             LogHelper.error(log, listener, "node is null", null);
             throw new IllegalStateException("node is null");
         }
-        // TODO: 支持publicIp/privateIp等多种形式
         String hostIp = node.getPublicIp();
         String remoteFs = node.getRemoteFS();
         String initScript = node.getInitScript();
         PrintStream remoteLogger = listener.getLogger();
         if (StringUtils.isBlank(hostIp)) {
-            LogHelper.error(log, listener,
-                    "launchScript skipped. hostIp is blank. instanceId: " + node.getEcsInstanceId(), null);
-            return;
+            // 优先使用公网IP, 没有的话, 则降级到内网IP.
+            hostIp = node.getPrivateIp();
+            LogHelper.warn(log, listener,
+                "launchScript using privateIp " + hostIp + " publicIp is null. instanceId: " + node.getEcsInstanceId(), null);
         }
         Connection conn = null;
         try {
@@ -149,12 +149,16 @@ public class AlibabaEcsUnixComputerLauncher extends AlibabaEcsComputerLauncher {
                 if (null == follower) {
                     throw new AlibabaEcsException("alibabaEcsSpotFollower is null");
                 }
-                String publicIp = follower.getPublicIp();
 
-                if (StringUtils.isEmpty(publicIp)) {
-                    throw new AlibabaEcsException("public ip is null");
+                // 优先使用公网IP, 没有的话, 则降级到内网IP.
+                String privateIp = follower.getPrivateIp();
+                String hostIp = follower.getPublicIp();
+                if (StringUtils.isEmpty(hostIp)) {
+                    LogHelper.warn(log, listener,
+                        "connectToSsh using privateIp " + privateIp + " publicIp is null. instanceId: " + follower.getEcsInstanceId(), null);
+                    hostIp = privateIp;
                 }
-                Connection conn = new Connection(publicIp, 22);
+                Connection conn = new Connection(hostIp, 22);
                 conn.connect(new ServerHostKeyVerifierImpl(computer, listener), 10000, 10000);
                 boolean b = false;
                 AlibabaCloud alibabaCloud = computer.getCloud();
