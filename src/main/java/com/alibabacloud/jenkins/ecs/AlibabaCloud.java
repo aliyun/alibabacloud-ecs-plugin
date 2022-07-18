@@ -102,7 +102,9 @@ public class AlibabaCloud extends Cloud {
     @DataBoundConstructor
     public AlibabaCloud(String name, String credentialsId, String sshKey, String region,
                         String image, String vpc, String securityGroup, String zone, String vsw, String instanceType,
-                        int minimumNumberOfInstances, String initScript, String labelString, String remoteFs) {
+                        int minimumNumberOfInstances, String initScript, String labelString, String remoteFs,
+                        String systemDiskCategory, Integer systemDiskSize,
+                        Boolean attachPublicIp) {
         super(StringUtils.isBlank(name) ? CLOUD_ID : name);
         this.credentialsId = credentialsId;
         this.sshKey = sshKey;
@@ -142,7 +144,7 @@ public class AlibabaCloud extends Cloud {
 
         AlibabaEcsFollowerTemplate template = new AlibabaEcsFollowerTemplate(region, zone, instanceType,
             minimumNumberOfInstances, vsw,
-            initScript, labelString, remoteFs);
+            initScript, labelString, remoteFs, systemDiskCategory, systemDiskSize, attachPublicIp);
         templates = Lists.newArrayList(template);
         readResolve();
     }
