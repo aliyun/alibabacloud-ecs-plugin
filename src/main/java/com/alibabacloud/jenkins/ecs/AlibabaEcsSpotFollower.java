@@ -22,6 +22,7 @@ import jenkins.model.Jenkins;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.json.JSONObject;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -55,19 +56,23 @@ public class AlibabaEcsSpotFollower extends Slave {
         this.templateId = templateId;
         setLabelString(labelString);
         DescribeInstancesResponse.Instance instance = describeNode();
-        if (null != instance) {
-            instanceType = instance.getInstanceType();
-            status = instance.getStatus();
-            List<String> privateIpAddress = instance.getVpcAttributes().getPrivateIpAddress();
-            if (CollectionUtils.isNotEmpty(privateIpAddress)) {
-                privateIp = privateIpAddress.get(0);
-            }
-            List<String> publicIpAddress = instance.getPublicIpAddress();
-            if (CollectionUtils.isNotEmpty(publicIpAddress)) {
-                publicIp = publicIpAddress.get(0);
-            }
-            keyPairName = instance.getKeyPairName();
+        if (null == instance) {
+            log.error("describeNode error. instance is null. ecsInstanceId: " + ecsInstanceId);
+            return;
         }
+        instanceType = instance.getInstanceType();
+        status = instance.getStatus();
+        List<String> privateIpAddress = instance.getVpcAttributes().getPrivateIpAddress();
+        if (CollectionUtils.isNotEmpty(privateIpAddress)) {
+            privateIp = privateIpAddress.get(0);
+        } else {
+            log.error("instance.getPrivateIpAddress is null. ecsInstanceId: " + ecsInstanceId);
+        }
+        List<String> publicIpAddress = instance.getPublicIpAddress();
+        if (CollectionUtils.isNotEmpty(publicIpAddress)) {
+            publicIp = publicIpAddress.get(0);
+        }
+        keyPairName = instance.getKeyPairName();
     }
 
     @DataBoundConstructor
@@ -141,6 +146,17 @@ public class AlibabaEcsSpotFollower extends Slave {
     }
 
     public String getPrivateIp() {
+        if (StringUtils.isNotBlank(privateIp)) {
+            return privateIp;
+        }
+        DescribeInstancesResponse.Instance instance = describeNode();
+        if (null == instance) {
+            return privateIp;
+        }
+        List<String> privateIpAddress = instance.getVpcAttributes().getPrivateIpAddress();
+        if (CollectionUtils.isNotEmpty(privateIpAddress)) {
+            privateIp = privateIpAddress.get(0);
+        }
         return privateIp;
     }
 
@@ -217,37 +233,71 @@ public class AlibabaEcsSpotFollower extends Slave {
         return false;
     }
 
+    public String gracefulTerminate() {
+        try {
+            String currStatus = status();
+            if(currStatus.equals("UNKNOWN")) {
+                return currStatus;
+            }
+            boolean stop = stop();
+            if (!stop) {
+                log.error("instance status illegal, failed terminate");
+                return status();
+            }
+            AlibabaEcsClient connect = getCloud().connect();
+            waitForStatus(Lists.newArrayList("Pending", "Stopped"), 30, 1000L);
+
+            connect.terminateInstance(ecsInstanceId, true);
+            String status = waitForStatus(Lists.newArrayList("UNKNOWN"), 30, 1000L);
+            return status;
+        } catch (Exception e) {
+            log.error("terminate error intanceId: {}", ecsInstanceId, e);
+        }
+        return status();
+    }
+
+    public String waitForStatus(List<String> targetStatusList, int retryTimes, long sleepMills) {
+        String status = null;
+        for (int i = 0; i < retryTimes; i++) {
+            status = status();
+            if (targetStatusList.contains(status)) {
+                log.info("waitForStatus success. instanceId: {} targetStatus: {} triedTimes: {}", ecsInstanceId,
+                    targetStatusList, i);
+                break;
+            }
+            try {
+                Thread.sleep(sleepMills);
+            } catch (InterruptedException e) {
+                log.error("waitForStatus error instanceId: {} targetStatus: {} ", ecsInstanceId, e);
+            }
+        }
+        return status;
+    }
+
+    public String forceTerminate() {
+        String currStatus = status();
+        if(currStatus.equals("UNKNOWN")) {
+            return currStatus;
+        }
+        AlibabaEcsClient connect = getCloud().connect();
+        connect.terminateInstance(ecsInstanceId, true);
+        return waitForStatus(Lists.newArrayList("UNKNOWN"), 180, 1000L);
+    }
+
     public void terminate() {
         Computer.threadPoolForRemoting.submit(() -> {
             try {
-                boolean stop = stop();
-                if (!stop) {
-                    log.error("instance status illegal, failed terminate");
-                    return;
-                }
-                AlibabaEcsClient connect = getCloud().connect();
-                String status = null;
-                for (int i = 0; i < 30; i++) {
-                    status = status();
-                    if ("UNKNOWN".equalsIgnoreCase(status)) {
-                        break;
-                    } else if ("Stopped".equalsIgnoreCase(status) || "Pending".equalsIgnoreCase(status)) {
-                        connect.terminateIntance(ecsInstanceId);
-                    }
-                    Thread.sleep(1000L);
-                }
-                log.info("terminate finished. status: {}", status);
-                if ("UNKNOWN".equals(status)) {
+                // String currStatus = gracefulTerminate();
+                String currStatus = forceTerminate();
+                if ("UNKNOWN".equals(currStatus)) {
                     Jenkins.getInstanceOrNull().removeNode(this);
                     log.info("delete node: {} success.", getNodeName());
                 } else {
                     log.info("delete node: {} failed. status: {}", getNodeName(), status);
                 }
-                return;
             } catch (Exception e) {
                 log.error("terminate error intanceId: {}", ecsInstanceId, e);
             }
-            return;
         });
     }
 

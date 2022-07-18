@@ -56,5 +56,14 @@
     <f:entry title="${%Remote FS root}" field="remoteFs">
         <f:textbox/>
     </f:entry>
+    <f:entry title="${%System Disk Category}" field="systemDiskCategory">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%System Disk Size}" field="systemDiskSize">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%Assign Public Ip}" field="attachPublicIp">
+        <f:checkbox/>
+    </f:entry>
 
 </j:jelly>

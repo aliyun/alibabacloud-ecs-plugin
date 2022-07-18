@@ -23,6 +23,9 @@
                 <f:entry title="Public IP" field="publicIp">
                     <f:readOnlyTextbox value="${instance.publicIp}"/>
                 </f:entry>
+                <f:entry title="Private IP" field="privateIp">
+                    <f:readOnlyTextbox value="${instance.privateIp}"/>
+                </f:entry>
                 <f:entry title="# of executors" field="numExecutors">
                     <f:textbox/>
                 </f:entry>
