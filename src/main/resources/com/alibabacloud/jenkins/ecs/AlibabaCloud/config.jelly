@@ -57,13 +57,13 @@
         <f:textbox/>
     </f:entry>
     <f:entry title="${%System Disk Category}" field="systemDiskCategory">
-        <f:textbox/>
+        <f:select />
     </f:entry>
     <f:entry title="${%System Disk Size}" field="systemDiskSize">
         <f:textbox/>
     </f:entry>
     <f:entry title="${%Assign Public Ip}" field="attachPublicIp">
-        <f:checkbox/>
+        <f:checkbox default="true"/>
     </f:entry>
 
 </j:jelly>

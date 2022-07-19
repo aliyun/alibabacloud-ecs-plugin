@@ -93,6 +93,28 @@ public class AlibabaCloud extends Cloud {
     private String labelString;
     private int minimumNumberOfInstances;
 
+    /**
+     * 系统盘类型
+     * <p>
+     * cloud_efficiency：高效云盘。
+     * cloud_ssd：SSD云盘。
+     * cloud_essd：ESSD云盘。
+     * cloud：普通云盘。
+     * </p>
+     */
+    private String systemDiskCategory;
+
+    /**
+     * 系统盘大小, 以GB为单位, 取值范围：20~500。
+     */
+    private Integer systemDiskSize;
+
+    /**
+     * 是否创建公网IP, 目前用NAT公网IP, 后续可以考虑使用EIP
+     */
+    private Boolean attachPublicIp = Boolean.TRUE;
+
+
     private List<AlibabaEcsFollowerTemplate> templates;
 
     private transient AlibabaEcsClient connection;
@@ -141,6 +163,9 @@ public class AlibabaCloud extends Cloud {
         this.minimumNumberOfInstances = minimumNumberOfInstances;
         this.initScript = initScript;
         this.labelString = labelString;
+        this.systemDiskCategory = systemDiskCategory;
+        this.systemDiskSize = systemDiskSize;
+        this.attachPublicIp = attachPublicIp;
 
         AlibabaEcsFollowerTemplate template = new AlibabaEcsFollowerTemplate(region, zone, instanceType,
             minimumNumberOfInstances, vsw,
@@ -298,6 +323,18 @@ public class AlibabaCloud extends Cloud {
 
     public String getInstanceType() {
         return instanceType;
+    }
+
+    public String getSystemDiskCategory() {
+        return systemDiskCategory;
+    }
+
+    public Integer getSystemDiskSize() {
+        return systemDiskSize;
+    }
+
+    public Boolean getAttachPublicIp() {
+        return attachPublicIp;
     }
 
     public String getRegion() {
@@ -588,6 +625,16 @@ public class AlibabaCloud extends Cloud {
                 }
             } catch (Exception ex) {
                 // Ignore, as this may happen before the credentials are specified
+            }
+            return model;
+        }
+
+        @RequirePOST
+        public ListBoxModel doFillSystemDiskCategoryItems() {
+            ListBoxModel model = new ListBoxModel();
+            List<String> systemDiskCategorys = Lists.newArrayList("cloud_essd", "cloud_ssd", "cloud_efficiency", "cloud");
+            for (String systemDiskCategory : systemDiskCategorys) {
+                model.add(systemDiskCategory, systemDiskCategory);
             }
             return model;
         }
