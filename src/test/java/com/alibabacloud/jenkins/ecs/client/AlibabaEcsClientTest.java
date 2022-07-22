@@ -50,7 +50,7 @@ public class AlibabaEcsClientTest {
         String ak = "<your-access-key>";
         String sk = "<your-secret-key>";
         AlibabaCredentials credentials = new AlibabaCredentials(ak, sk);
-        AlibabaEcsClient client = new AlibabaEcsClient(credentials, "cn-beijing");
+        AlibabaEcsClient client = new AlibabaEcsClient(credentials, "cn-beijing", false);
         Whitebox.setInternalState(client, "client", acsClient);
 
         DescribeKeyPairsResponse acsResponse = new DescribeKeyPairsResponse();
@@ -68,7 +68,7 @@ public class AlibabaEcsClientTest {
         String ak = "<your-access-key>";
         String sk = "<your-secret-key>";
         AlibabaCredentials credentials = new AlibabaCredentials(ak, sk);
-        AlibabaEcsClient client = new AlibabaEcsClient(credentials, "regionId");
+        AlibabaEcsClient client = new AlibabaEcsClient(credentials, "regionId", false);
         return client;
     }
 
