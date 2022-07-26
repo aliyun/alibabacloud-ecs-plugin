@@ -20,10 +20,12 @@ import com.aliyuncs.ecs.model.v20140526.DescribeSecurityGroupsResponse.SecurityG
 import com.aliyuncs.ecs.model.v20140526.DescribeVSwitchesResponse.VSwitch;
 import com.aliyuncs.ecs.model.v20140526.DescribeVpcsResponse.Vpc;
 import com.aliyuncs.ecs.model.v20140526.DescribeZonesResponse.Zone;
+import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.http.FormatType;
 import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import com.google.common.collect.Lists;
+import hudson.util.FormValidation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -38,18 +40,25 @@ public class AlibabaEcsClient {
     private String regionNo;
     private static Integer MAX_PAGE_SIZE = 50;
     private static Integer INIT_PAGE_NUMBER = 1;
+    private Boolean intranetMaster = Boolean.FALSE;
 
-    public AlibabaEcsClient(AlibabaCloudCredentials credentials, String regionNo) {
+    public AlibabaEcsClient(AlibabaCloudCredentials credentials, String regionNo, Boolean intranetMaster) {
         IClientProfile profile = DefaultProfile.getProfile(regionNo,
                 credentials.getAccessKeyId(),
                 credentials.getAccessKeySecret());
+        if(intranetMaster != null && intranetMaster) {
+            // use vpc endpoint if jenkins master in vpc private env
+            profile.enableUsingVpcEndpoint();
+        }
         this.client = new DefaultAcsClient(profile);
         this.regionNo = regionNo;
-        log.info("AlibabaEcsClient init success. regionNo: {}", regionNo);
+        this.intranetMaster = intranetMaster == null ? Boolean.FALSE: intranetMaster;
+        log.info("AlibabaEcsClient init success. regionNo: {} intranetMaster: {}", regionNo, intranetMaster);
     }
 
     public List<Region> describeRegions() {
         try {
+
             DescribeRegionsRequest request = new DescribeRegionsRequest();
             request.setSysRegionId(regionNo);
             DescribeRegionsResponse acsResponse = client.getAcsResponse(request);
@@ -418,6 +427,33 @@ public class AlibabaEcsClient {
             log.error("runInstances error. request: {}", JSON.toJSONString(request), e);
         }
         return Lists.newArrayList();
+    }
+
+    public FormValidation druRunInstances(RunInstancesRequest request) {
+        try {
+            List<RunInstancesRequest.Tag> tags = Lists.newArrayList();
+            RunInstancesRequest.Tag tag = new RunInstancesRequest.Tag();
+            tag.setKey("CreatedFrom");
+            tag.setValue("jenkins-plugin");
+            tags.add(tag);
+            request.setTags(tags);
+            request.setAcceptFormat(FormatType.JSON);
+            request.setInstanceChargeType("PostPaid");
+            request.setSpotStrategy("SpotAsPriceGo");
+            request.setIoOptimized("optimized");
+            request.setDryRun(true);
+
+            RunInstancesResponse acsResponse = client.getAcsResponse(request);
+            log.info("druRunInstances success. acsResponse: {}", JSON.toJSONString(acsResponse));
+            return FormValidation.ok("success.");
+        } catch (ClientException e) {
+            if ("DryRunOperation".equals(e.getErrCode())) {
+                log.info("druRunInstances success. acsResponse: {}", JSON.toJSONString(request));
+                return FormValidation.ok("success.");
+            }
+            log.error("druRunInstances error:{}. request: {}", e, JSON.toJSONString(request));
+            return FormValidation.error("error：" + e);
+        }
     }
 
     public String allocatePublicIp(String instanceId) {
