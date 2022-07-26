@@ -71,4 +71,7 @@
         <f:checkbox default="true"/>
     </f:entry>
 
+   <f:validateButton title="${%dryRunInstance}" progress="${%Runing...}" method="dryRunInstance"
+                         with="credentialsId,intranetMaster,region,image,vpc,securityGroup,zone,vsw,instanceType,minimumNumberOfInstances,initScript,labelString,remoteFs,systemDiskCategory,systemDiskSize,attachPublicIp"/>
+
 </j:jelly>
