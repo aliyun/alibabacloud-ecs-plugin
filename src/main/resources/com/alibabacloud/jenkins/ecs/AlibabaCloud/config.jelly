@@ -1,6 +1,8 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core"
-         xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+         xmlns:f="/lib/form"
+         xmlns:st="jelly:stapler"
+         xmlns:c="/lib/credentials">
     <f:entry title="${%Name}" field="name">
         <f:textbox default="Ecs Spot"/>
     </f:entry>
@@ -71,7 +73,12 @@
         <f:checkbox default="true"/>
     </f:entry>
 
-   <f:validateButton title="${%dryRunInstance}" progress="${%Runing...}" method="dryRunInstance"
+    <f:entry title="${%Tags}" description="${%ECS Tag/Value Pairs}">
+        <f:repeatable field="tags">
+            <st:include page="config.jelly" class="${descriptor.clazz}"/>
+        </f:repeatable>
+    </f:entry>
+    <f:validateButton title="${%dryRunInstance}" progress="${%Runing...}" method="dryRunInstance"
                          with="credentialsId,intranetMaster,region,image,vpc,securityGroup,zone,vsw,instanceType,minimumNumberOfInstances,initScript,labelString,remoteFs,systemDiskCategory,systemDiskSize,attachPublicIp"/>
 
 </j:jelly>
