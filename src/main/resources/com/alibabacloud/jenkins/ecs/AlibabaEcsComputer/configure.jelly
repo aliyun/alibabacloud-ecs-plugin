@@ -7,7 +7,6 @@
             <f:form method="post" action="configSubmit" name="config">
                 <j:set var="instance" value="${it.node}"/>
                 <j:set var="descriptor" value="${instance.descriptor}"/>
-
                 <f:entry title="Instance Id" field="ecsInstanceId">
                     <f:readOnlyTextbox value="${it.instanceId}"/>
                 </f:entry>
