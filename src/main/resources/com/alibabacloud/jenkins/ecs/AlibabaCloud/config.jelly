@@ -78,7 +78,10 @@
             <st:include page="config.jelly" class="${descriptor.clazz}"/>
         </f:repeatable>
     </f:entry>
+    <f:entry title="${%Instance Charge Type}" field="chargeType">
+        <f:select />
+    </f:entry>
     <f:validateButton title="${%dryRunInstance}" progress="${%Runing...}" method="dryRunInstance"
-                         with="credentialsId,intranetMaster,region,image,vpc,securityGroup,zone,vsw,instanceType,minimumNumberOfInstances,initScript,labelString,remoteFs,systemDiskCategory,systemDiskSize,attachPublicIp"/>
+                         with="credentialsId,intranetMaster,region,image,vpc,securityGroup,zone,vsw,instanceType,minimumNumberOfInstances,initScript,labelString,remoteFs,systemDiskCategory,systemDiskSize,attachPublicIp,chargeType"/>
 
 </j:jelly>
